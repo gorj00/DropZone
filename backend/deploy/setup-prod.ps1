@@ -60,6 +60,12 @@ gcloud iam service-accounts add-iam-policy-binding $Runtime --project $Project -
 
 & (Join-Path $PSScriptRoot 'deploy-prod.ps1')
 
+$Deployer = "github-deployer@$Project.iam.gserviceaccount.com"
+if (Exists { gcloud iam service-accounts describe $Deployer --project $Project }) {
+    gcloud run services add-iam-policy-binding dropzone-api --region $Region --project $Project --member "serviceAccount:$Deployer" --role roles/run.developer --format none
+    gcloud iam service-accounts add-iam-policy-binding $Runtime --project $Project --member "serviceAccount:$Deployer" --role roles/iam.serviceAccountUser --format none
+}
+
 $jobs = [ordered]@{
     'daily-reminders'        = '0 * * * *'
     'trial-reminders'        = '0 * * * *'

@@ -105,6 +105,7 @@ Admin = a Google-linked account whose e-mail is in `ADMIN_EMAILS`.
 
 - First time: run `backend/deploy/setup-prod.ps1` (PowerShell, signed in to gcloud as a project owner). It creates the `dropzone_prod` database and user on the shared `saas-db`, the prod secrets, the private bucket `dropzone-prod-uploads` (no soft delete), the runtime service account and its roles, deploys the Cloud Run service `dropzone-api` (public, scales to zero), creates the seven Cloud Scheduler jobs and the uptime check with an alert e-mail. It is safe to run again.
 - Later deploys: `backend/deploy/deploy-prod.ps1`. Dev deploys: `backend/deploy/deploy-dev.ps1`.
+- From GitHub (after `backend/deploy/setup-github-deploy.ps1` ran once; no keys stored in GitHub): a push to `main` runs backend tests, web tests and build, and the Android build, then deploys dev. Prod deploys only from the `deploy-prod` workflow ("Run workflow", branch `main`). Both deploy a new image only; env and secrets changes still go through the PowerShell scripts.
 - Prod URL until the domain exists: `https://dropzone-api-258611697847.europe-west4.run.app`.
 - Private photos on dev: run `backend/deploy/dev-private-photos.ps1` once (grants the dev runtime account the right to sign links, then removes public read and soft delete from `dropzone-dev-uploads`).
 - Point-in-time recovery on `saas-db` is off: turning it on restarts the instance (lindasheet and owino too): `gcloud sql instances patch saas-db --project gorol-saas-projects --enable-point-in-time-recovery`.

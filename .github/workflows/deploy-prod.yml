@@ -1,0 +1,37 @@
+name: deploy-prod
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  PROJECT: gorol-saas-projects
+  REGION: europe-west4
+  IMAGE: europe-west4-docker.pkg.dev/gorol-saas-projects/apps/dropzone-api
+  WIF_PROVIDER: projects/258611697847/locations/global/workloadIdentityPools/github/providers/dropzone
+  DEPLOYER: github-deployer@gorol-saas-projects.iam.gserviceaccount.com
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOYER }}
+      - uses: google-github-actions/setup-gcloud@v3
+      - run: gcloud auth configure-docker europe-west4-docker.pkg.dev --quiet
+      - run: |
+          docker build -t "$IMAGE:prod-$GITHUB_SHA" -t "$IMAGE:prod" backend
+          docker push "$IMAGE:prod-$GITHUB_SHA"
+          docker push "$IMAGE:prod"
+      - run: gcloud run deploy dropzone-api --project "$PROJECT" --region "$REGION" --image "$IMAGE:prod-$GITHUB_SHA" --quiet
