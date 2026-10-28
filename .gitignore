@@ -1,0 +1,17 @@
+.env
+.env*
+dev.env.yaml
+node_modules/
+dist/
+.angular/
+build/
+bin/
+*.jks
+*.keystore
+local.properties
+.claude/
+frontend/android/app/release/
+design/
+TODO.md
+audit-mvp-production.md
+docs/audit-*.md

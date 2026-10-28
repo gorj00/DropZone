@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "258611697847",
+    "project_id": "gorol-saas-projects",
+    "storage_bucket": "gorol-saas-projects.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:258611697847:android:719f695fed2d298fa71532",
+        "android_client_info": {
+          "package_name": "com.dropzone.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "258611697847-v6ecvimomk4f2s32f11tdabka7kk491h.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.dropzone.app",
+            "certificate_hash": "8271ea715b745ee31b3300b7b5da10c0675d2ba1"
+          }
+        },
+        {
+          "client_id": "258611697847-lhok4qitopc3a0hnpm3129avrvbb97q5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCIrmbQPN9fz2anjpG-5MAYkqEyPc1UA0k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "258611697847-lhok4qitopc3a0hnpm3129avrvbb97q5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

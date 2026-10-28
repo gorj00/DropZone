@@ -1,0 +1,97 @@
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { DomSanitizer } from '@angular/platform-browser';
+
+const ICONS: Record<string, string> = {
+  scale: '<rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><path d="M8.5 10a3.5 3.5 0 0 1 7 0"/><path d="M12 10l1.6-1.6"/>',
+  meal: '<path d="M3.5 11.5h17a8.5 8.5 0 0 1-17 0z"/><path d="M8.5 8c0-1.6 1-2.8 2.6-3"/><path d="M13 7.5c.5-1.8 2-2.9 3.6-2.6"/>',
+  steps: '<path d="M8 3.5c1.6 0 2.5 1.6 2.3 4-.2 2.1-.9 3.3-.9 4.8H6.6c0-1.5-.7-2.7-.9-4.8-.2-2.4.7-4 2.3-4z"/><path d="M6.6 14.8h2.8v1.4a1.4 1.4 0 0 1-2.8 0z"/><path d="M16 7c1.6 0 2.5 1.6 2.3 4-.2 2.1-.9 3.3-.9 4.8h-2.8c0-1.5-.7-2.7-.9-4.8-.2-2.4.7-4 2.3-4z"/><path d="M14.6 18.3h2.8v1.4a1.4 1.4 0 0 1-2.8 0z"/>',
+  reps: '<rect x="2.5" y="6" width="13" height="12" rx="3"/><path d="M15.5 10.5l6-3.5v10l-6-3.5"/><circle cx="9" cy="12" r="1.6" fill="currentColor"/>',
+  gym: '<path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/>',
+  bike: '<circle cx="5.5" cy="16.5" r="3.5"/><circle cx="18.5" cy="16.5" r="3.5"/><path d="M5.5 16.5L9 9h6.5l3 7.5"/><path d="M9 9l3.5 7.5H5.5"/><path d="M13.5 6.5h2.5"/>',
+  hike: '<path d="M2.5 19.5l6.5-11 4 6.5 2.5-3.5 6 8z"/><path d="M7 11.5l2 1.5 1.8-1.6"/>',
+  ball: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3v18"/><path d="M5.6 5.6c2.4 2.4 2.4 10.4 0 12.8M18.4 5.6c-2.4 2.4-2.4 10.4 0 12.8"/>',
+  swim: '<path d="M2.5 17c1.5 0 1.5 1.3 3 1.3s1.5-1.3 3-1.3 1.5 1.3 3 1.3 1.5-1.3 3-1.3 1.5 1.3 3 1.3 1.5-1.3 3-1.3"/><path d="M6 14l4.5-4.5 2.5 2 3.5-3"/><circle cx="17.5" cy="6.5" r="2"/>',
+  palette: '<path d="M12 3a9 9 0 1 0 0 18c1.3 0 2-.8 2-1.8 0-1.4-1.3-1.8-1.3-3 0-1 .8-1.7 1.8-1.7H17a4 4 0 0 0 4-4C21 6.4 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.1" fill="currentColor"/><circle cx="10" cy="7" r="1.1" fill="currentColor"/><circle cx="15" cy="7.5" r="1.1" fill="currentColor"/>',
+  film: '<rect x="3" y="8.5" width="18" height="12" rx="2.5"/><path d="M3 8.5l15.5-4.5.8 3"/><path d="M8 6.9l2.2 2.9M13 5.5l2.2 2.9"/>',
+  users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17" cy="9" r="2.8"/><path d="M17.5 14.2c2.4.3 4 2.2 4 4.8"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.2 3.6-7 8-7s8 2.8 8 7"/>',
+  userplus: '<circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3.1-7 7-7s7 3 7 7M19 8v6M16 11h6"/>',
+  flame: '<path d="M12 21.5c-4 0-7-2.8-7-6.7 0-3.8 3-6 4-9.3 2.3 1.5 3 3.5 3 5.3 1-.8 1.7-2 1.8-3.3 2.6 1.8 4.2 4.5 4.2 7.3 0 3.9-2.8 6.7-6 6.7z" fill="currentColor" stroke="none"/>',
+  lock: '<rect x="4.5" y="10.5" width="15" height="11" rx="3"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>',
+  camera: '<path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h2l1.5-2h6l1.5 2h2A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><circle cx="12" cy="13" r="3.8"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  back: '<path d="M15 5l-7 7 7 7"/>',
+  close: '<path d="M6 6l12 12M18 6L6 18"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  minus: '<path d="M5 12h14"/>',
+  chev: '<path d="M9 5l7 7-7 7"/>',
+  chevdown: '<path d="M5 9l7 7 7-7"/>',
+  flag: '<path d="M5 21V4M5 4.5h12l-2.5 4 2.5 4H5"/>',
+  target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/>',
+  route: '<circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="5" r="2.5"/><path d="M8.5 19H16a3.5 3.5 0 0 0 0-7H8a3.5 3.5 0 0 1 0-7h7.5"/>',
+  chute: '<path d="M3 11.5a9 9 0 0 1 18 0c-1.5-1-3-1-4.5 0-1.5-1-3-1-4.5 0-1.5-1-3-1-4.5 0-1.5-1-3-1-4.5 0z"/><path d="M3 11.5l7.6 7.5M21 11.5l-7.6 7.5"/><rect x="10" y="18.5" width="4" height="3" rx="1"/>',
+  crown: '<path d="M3 8l4.5 4.5L12 5l4.5 7.5L21 8l-1.8 11H4.8z"/>',
+  trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 5.5H4.5a3 3 0 0 0 3.5 3.5M16 5.5h3.5a3 3 0 0 1-3.5 3.5M12 13v4M8.5 20.5h7M10 17h4v3.5h-4z"/>',
+  medal: '<circle cx="12" cy="14.5" r="6"/><path d="M8.5 9.5L6 3h4l2 4.5L14 3h4l-2.5 6.5"/>',
+  bolt: '<path d="M13 2.5L4.5 13.5H12l-1 8 8.5-11H12z"/>',
+  coins: '<ellipse cx="9.5" cy="7" rx="6" ry="3"/><path d="M3.5 7v4.5c0 1.7 2.7 3 6 3 .9 0 1.7-.1 2.5-.3"/><ellipse cx="15" cy="15" rx="5.5" ry="2.8"/><path d="M9.5 15v3.5c0 1.5 2.5 2.8 5.5 2.8s5.5-1.3 5.5-2.8V15"/>',
+  cal: '<rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  timer: '<circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V10M9.5 2.5h5"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>',
+  moon: '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/>',
+  eyeoff: '<path d="M3 3l18 18"/><path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-2.9 3.9M6.6 6.6C3.9 8.4 2 12 2 12s3.6 7 10 7c1.9 0 3.6-.6 5-1.4"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="M20.5 20.5L16 16"/>',
+  upload: '<path d="M12 15V4M7.5 8.5L12 4l4.5 4.5M4 15v3.5A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V15"/>',
+  edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
+  sliders: '<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>',
+  hourglass: '<path d="M6.5 3h11M6.5 21h11M7.5 3c0 4.5 4.5 6 4.5 9s-4.5 4.5-4.5 9M16.5 3c0 4.5-4.5 6-4.5 9s4.5 4.5 4.5 9"/>',
+  ai: '<path d="M11 3l1.8 5.2L18 10l-5.2 1.8L11 17l-1.8-5.2L4 10l5.2-1.8z"/><path d="M18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/>',
+  share: '<path d="M12 3v12M7.5 7.5L12 3l4.5 4.5"/><path d="M5 12v8.5h14V12"/>',
+  imgoff: '<rect x="3.5" y="4.5" width="17" height="15" rx="3"/><path d="M3.5 16l5-4.5 4 3.5 3-2.5 5 4"/><path d="M3 3l18 18"/>',
+  flip: '<path d="M20 11a8 8 0 0 0-14.5-4.5L4 8M4 13a8 8 0 0 0 14.5 4.5L20 16"/><path d="M4 4v4h4M20 20v-4h-4"/>',
+  down: '<path d="M12 4v16M6 14l6 6 6-6"/>',
+  download: '<path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M4 15v3.5A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V15"/>',
+  up: '<path d="M12 20V4M6 10l6-6 6 6"/>',
+  chart: '<path d="M5 20V11M11 20V5M17 20v-6M3 20h18"/>',
+  ruler: '<path d="M3 15.5L15.5 3l5.5 5.5L8.5 21z"/><path d="M7 12l2 2M10 9l2 2M13 6l2 2"/>',
+  protein: '<path d="M7.5 8h9l-1.2 12.5H8.7z"/><path d="M8.5 8V4.5h7V8"/><path d="M10 13h4"/>',
+  drop: '<path d="M12 3c3.5 4.5 6 7.5 6 11a6 6 0 0 1-12 0c0-3.5 2.5-6.5 6-11z"/>',
+  trend: '<path d="M3 17l6-6 4 4 8-8M15 7h6v6"/>',
+  yoga: '<circle cx="12" cy="5" r="2"/><path d="M4 11l8-2 8 2M12 9v6M8 21l4-6 4 6"/>',
+  cup: '<path d="M6 8h12l-1.5 12.5h-9z"/><path d="M10 8l1-5h4"/>',
+  burger: '<path d="M4 10a8 5.5 0 0 1 16 0z"/><path d="M3.5 13.5h17M5 17h14v1a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 18z"/>',
+  wine: '<path d="M8 3h8l-.5 5a3.5 3.5 0 0 1-7 0z"/><path d="M12 11.5V20M8.5 20.5h7"/>',
+  bag: '<path d="M5 8h14l-1 12.5H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
+  candy: '<circle cx="12" cy="12" r="4"/><path d="M8.5 9.5L4 7l1 5-1 5 4.5-2.5M15.5 9.5L20 7l-1 5 1 5-4.5-2.5"/>',
+  phone: '<rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M11 18h2"/>',
+  gift: '<rect x="3.5" y="8" width="17" height="4" rx="1"/><path d="M5 12v8.5h14V12M12 8v12.5"/><path d="M12 8C10.5 4.5 7 4 7 6.2 7 7.5 9 8 12 8zM12 8c1.5-3.5 5-4 5-1.8 0 1.3-2 1.8-5 1.8z"/>',
+  link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+  logout: '<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l-5-5 5-5M5 12h11"/>',
+  bell: '<path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/>',
+  trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
+  refresh: '<path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/>',
+  comment: '<path d="M4 5h16v11H9l-5 4z"/><path d="M8 10h8M8 13h5"/>',
+  heart: '<path d="M12 20s-7.2-4.4-9.1-8.7C1.5 8.1 3.4 4.5 6.9 4.5c2 0 3.5 1.1 5.1 3.1 1.6-2 3.1-3.1 5.1-3.1 3.5 0 5.4 3.6 4 6.8C19.2 15.6 12 20 12 20z"/>',
+  heartfill: '<path fill="currentColor" d="M12 20s-7.2-4.4-9.1-8.7C1.5 8.1 3.4 4.5 6.9 4.5c2 0 3.5 1.1 5.1 3.1 1.6-2 3.1-3.1 5.1-3.1 3.5 0 5.4 3.6 4 6.8C19.2 15.6 12 20 12 20z"/>',
+  more: '<circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/>',
+  image: '<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>',
+  split: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M12 4v16"/>',
+  slides: '<rect x="3" y="5" width="13" height="14" rx="2"/><path d="M19 7v10M22 9v6"/>',
+  block: '<circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/>'
+};
+
+export type IconName = keyof typeof ICONS;
+
+@Component({
+  selector: 'app-icon',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { style: 'display:contents' },
+  template: `<svg class="ic" viewBox="0 0 24 24" [style.width.px]="size()" [style.height.px]="size()" [innerHTML]="markup()"></svg>`
+})
+export class Icon {
+  private readonly sanitizer = inject(DomSanitizer);
+  readonly name = input.required<string>();
+  readonly size = input<number | null>(null);
+  protected readonly markup = computed(() => this.sanitizer.bypassSecurityTrustHtml(ICONS[this.name()] ?? ''));
+}

@@ -1,0 +1,15 @@
+create index proof_verifications_user_idx on proof_verifications (user_id);
+create index hypes_user_idx on hypes (user_id);
+create index friend_requests_to_user_idx on friend_requests (to_user_id);
+create index friendships_friend_idx on friendships (friend_id);
+create index comments_user_idx on comments (user_id);
+create index comment_likes_user_idx on comment_likes (user_id);
+create index notifications_actor_idx on notifications (actor_id);
+create index notifications_feed_item_idx on notifications (feed_item_id);
+create index notifications_proof_idx on notifications (proof_id);
+create index notifications_comment_idx on notifications (comment_id);
+create index feed_items_proof_idx on feed_items (proof_id);
+create index quest_completions_proof_idx on quest_completions (proof_id);
+create index checkpoints_proof_idx on checkpoints (proof_id);
+create index slip_ups_type_idx on slip_ups (type);
+create index proofs_photo_url_idx on proofs (photo_url);

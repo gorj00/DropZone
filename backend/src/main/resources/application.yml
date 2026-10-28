@@ -1,0 +1,67 @@
+spring:
+  application:
+    name: dropzone-api
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/dropzone}
+    username: ${DB_USER:dropzone}
+    password: ${DB_PASSWORD:dropzone}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:5}
+      connection-timeout: 10000
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 11MB
+
+server:
+  port: ${PORT:8080}
+  forward-headers-strategy: framework
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+dropzone:
+  auth:
+    jwt-secret: ${JWT_SECRET:}
+    jwt-ttl-days: 7
+    google-client-ids: ${GOOGLE_CLIENT_IDS:}
+    dev-login: ${DEV_LOGIN:false}
+  storage:
+    bucket: ${GCS_BUCKET:dropzone-local}
+    endpoint: ${GCS_ENDPOINT:http://localhost:4443}
+    public-base-url: ${GCS_PUBLIC_BASE_URL:http://localhost:4443/dropzone-local}
+    create-bucket: ${GCS_CREATE_BUCKET:true}
+    project-id: ${GCS_PROJECT_ID:dropzone-local}
+  push:
+    firebase-credentials: ${FIREBASE_CREDENTIALS:}
+  billing:
+    revenuecat-webhook-secret: ${REVENUECAT_WEBHOOK_SECRET:}
+    revenuecat-api-key: ${REVENUECAT_API_KEY:}
+    entitlement: pro
+  photos:
+    unsplash-access-key: ${UNSPLASH_ACCESS_KEY:}
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:4200,capacitor://localhost,https://localhost,http://localhost}
+  legal:
+    terms-version: ${TERMS_VERSION:1}
+    privacy-version: ${PRIVACY_VERSION:1}
+    terms-url: ${TERMS_URL:}
+    privacy-url: ${PRIVACY_URL:}
+    delete-account-url: ${DELETE_ACCOUNT_URL:}
+  app:
+    min-version-code: ${MIN_VERSION_CODE:1}
+  jobs:
+    in-process: ${JOBS_IN_PROCESS:true}
+    audience: ${JOBS_AUDIENCE:}
+    invoker: ${JOBS_INVOKER:}
+  moderation:
+    min-reporter-age: ${MIN_REPORTER_AGE:3d}
+  invite-base-url: https://dropzone.app/invite/
+  admin-emails: ${ADMIN_EMAILS:}

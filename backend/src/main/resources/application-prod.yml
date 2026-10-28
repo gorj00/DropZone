@@ -1,0 +1,14 @@
+dropzone:
+  storage:
+    bucket: ${GCS_BUCKET:}
+    endpoint: ${GCS_ENDPOINT:}
+    public-base-url: ${GCS_PUBLIC_BASE_URL:}
+    create-bucket: ${GCS_CREATE_BUCKET:false}
+    project-id: ${GCS_PROJECT_ID:}
+  cors:
+    allowed-origins: ${CORS_ORIGINS:https://localhost}
+
+logging:
+  structured:
+    format:
+      console: com.dropzone.api.config.GcpJsonLogFormatter
