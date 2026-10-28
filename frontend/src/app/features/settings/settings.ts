@@ -369,7 +369,7 @@ type Flag = 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'verifyRequestPushes
             <ng-container *ngTemplateOutlet="switchRow; context: { key: 'hiddenFromSearch', on: !!u.hiddenFromSearch, title: 'Hide me from search', text: 'Nobody finds you by @handle or name. Your invite link still works.' }" />
             <ng-container *ngTemplateOutlet="switchRow; context: { key: 'hiddenFromLeaderboards', on: !!u.hiddenFromLeaderboards, title: 'Hide me from leaderboards', text: 'You are left out of your friends’ boards. You still see your own place.' }" />
             @if (eu()) {
-              <ng-container *ngTemplateOutlet="switchRow; context: { key: 'shareStats', on: !!u.shareStats, title: 'Share anonymised statistics', text: 'Combined numbers about goals and habits that can’t identify you.' }" />
+              <ng-container *ngTemplateOutlet="switchRow; context: { key: 'shareStats', on: !!u.shareStats, title: 'Help improve DropZone', text: 'Share anonymised insights with us and our partners to improve the service. Your personal data stays private.' }" />
             }
             <button class="w-full flex items-center gap-3 px-3.5 h-[50px] text-left" (click)="toggleBlocked()">
               <span class="flex-1 font-semibold text-[14.5px]">Blocked users</span>

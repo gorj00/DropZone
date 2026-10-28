@@ -201,8 +201,8 @@ export class DisclosureGate {
         <label class="card mt-2.5 w-full max-w-[300px] px-3.5 py-3 flex items-start gap-3 text-left cursor-pointer">
           <input type="checkbox" class="w-5 h-5 mt-0.5 flex-none accent-accent" [checked]="share()" (change)="share.set($any($event.target).checked)" />
           <span class="leading-snug">
-            <span class="block font-semibold text-[14.5px]">Share anonymised statistics</span>
-            <span class="block text-[12.5px] text-mute mt-0.5">Optional. Combined numbers about goals and habits that can't identify you. You can change this in Settings.</span>
+            <span class="block font-semibold text-[14.5px]">Help improve DropZone</span>
+            <span class="block text-[12.5px] text-mute mt-0.5">Share anonymised insights with us and our partners to improve the service. Your personal data stays private.</span>
           </span>
         </label>
       }

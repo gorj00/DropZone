@@ -181,7 +181,7 @@ export function dayLabel(d: Date): string {
           @if (t.friendsCleared && t.friendsCleared.total > 0) {
             <a routerLink="/squad" class="mx-5 mt-3 card px-3.5 h-[54px] flex items-center gap-3">
               <div class="stack">
-                @for (a of t.friendsCleared.avatars.slice(0, 4); track $index) { <img class="av w-7 h-7" [src]="a" alt=""> }
+                @for (a of t.friendsCleared.avatars.slice(0, 4); track $index) { <img class="av w-7 h-7" [src]="a" alt="" (error)="$any($event.target).style.visibility = 'hidden'"> }
               </div>
               <div class="flex-1 text-[13px] leading-tight"><b>{{ t.friendsCleared.count }} of {{ t.friendsCleared.total }} friends</b><div class="text-mute">already cleared today</div></div>
               <span class="text-mute"><app-icon name="chev" [size]="16" /></span>

@@ -41,8 +41,8 @@ interface Earned {
             <div class="rounded-full p-[3px]" [class.opacity-60]="avatar.busy()" [style.width.px]="theme.isNeon() ? 96 : 100" [style.height.px]="theme.isNeon() ? 96 : 100"
               [style.background]="'linear-gradient(135deg, var(--accent), ' + (theme.isNeon() ? 'var(--violet)' : 'var(--gold)') + ')'"
               style="box-shadow: 0 0 30px rgba(var(--accent-rgb), .45)">
-              @if (u.avatarUrl) {
-                <img class="av w-full h-full border-[3px] border-bg" [src]="u.avatarUrl" alt="">
+              @if (u.avatarUrl && photoFailed() !== u.avatarUrl) {
+                <img class="av w-full h-full border-[3px] border-bg" [src]="u.avatarUrl" alt="" (error)="photoFailed.set(u.avatarUrl)">
               } @else {
                 <span class="av w-full h-full bg-s2 h !text-[36px] text-ink">{{ initials() }}</span>
               }
@@ -233,6 +233,7 @@ export class ProfilePage {
   protected readonly statsFailed = signal(false);
   protected readonly pastGoals = signal<PastGoal[]>([]);
 
+  protected readonly photoFailed = signal<string | null>(null);
   protected readonly initials = computed(() => (this.user()?.displayName ?? '').split(/\s+/).filter(Boolean).slice(0, 2).map(s => s[0]?.toUpperCase()).join('') || '?');
   protected readonly shelf = computed<Checkpoint[]>(() => [...(this.goal()?.checkpoints ?? [])].sort((a, b) => a.index - b.index));
   protected readonly cleared = computed(() => this.shelf().filter(c => c.status === 'CLEARED').length);

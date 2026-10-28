@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { Location } from '@angular/common';
 import { inject } from '@angular/core';
 import { StatsDay } from '../core/api/models';
@@ -18,8 +18,8 @@ export class ProTag { }
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { style: 'display:contents' },
   template: `
-    @if (url()) {
-      <img class="av" [src]="url()" alt="" [style.width.px]="size()" [style.height.px]="size()" [style.box-shadow]="ring() ? '0 0 0 2px ' + ring() : null">
+    @if (url() && failed() !== url()) {
+      <img class="av" [src]="url()" alt="" [style.width.px]="size()" [style.height.px]="size()" [style.box-shadow]="ring() ? '0 0 0 2px ' + ring() : null" (error)="failed.set(url() ?? null)">
     } @else {
       <span class="av" [style.width.px]="size()" [style.height.px]="size()" [style.font-size.px]="size() * 0.36" [style.background]="bg()" [style.box-shadow]="ring() ? '0 0 0 2px ' + ring() : null">{{ initials() }}</span>
     }
@@ -28,6 +28,7 @@ export class ProTag { }
 export class Avatar {
   readonly url = input<string | null | undefined>(null);
   readonly name = input('');
+  protected readonly failed = signal<string | null>(null);
   readonly size = input(38);
   readonly ring = input<string | null>(null);
   protected readonly initials = computed(() => this.name().split(/\s+/).filter(Boolean).slice(0, 2).map(s => s[0]?.toUpperCase()).join('') || '?');

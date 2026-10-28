@@ -91,7 +91,7 @@ describe('ConsentGate', () => {
     const req = await vi.waitFor(() => http.expectOne(`${API_URL}/me/consent`));
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ termsVersion: '2026-10', privacyVersion: '2026-11', ageConfirmed: true, shareStats: true, region: US });
-    expect(el.textContent).not.toContain('Share anonymised statistics');
+    expect(el.textContent).not.toContain('Help improve DropZone');
     req.flush(user(false));
     await fixture.whenStable();
 
@@ -121,7 +121,7 @@ describe('ConsentGate', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(el.textContent).toContain('Share anonymised statistics');
+    expect(el.textContent).toContain('Help improve DropZone');
     tickAge(fixture, el);
     el.querySelector('button')!.click();
     expect((await vi.waitFor(() => http.expectOne(`${API_URL}/me/consent`))).request.body).toEqual(
