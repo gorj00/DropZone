@@ -56,7 +56,8 @@ public final class Requests {
 			@Min(5) @Max(240) Integer minutesPerQuest, Boolean publicByDefault, Verification defaultVerification,
 			Boolean slipUpTracking, @Size(max = 64) String timezone, WeightUnit weightUnit, LengthUnit lengthUnit,
 			@Size(max = 150) String bio, @Size(max = MAX_URL) String avatarUrl, Boolean trialEndAcknowledged, Boolean proEndAcknowledged,
-			Boolean skipRestDays, Boolean hiddenFromSearch, Boolean hiddenFromLeaderboards, Boolean verifyRequestPushes) {
+			Boolean skipRestDays, Boolean hiddenFromSearch, Boolean hiddenFromLeaderboards, Boolean verifyRequestPushes,
+			Boolean shareStats, @Valid Region region) {
 	}
 
 	public record UpdateGoal(@Positive Double startValue, @Positive Double goalValue) {
@@ -72,7 +73,10 @@ public final class Requests {
 	}
 
 	public record Consent(@NotBlank @Size(max = 32) String termsVersion, @NotBlank @Size(max = 32) String privacyVersion,
-			Boolean ageConfirmed) {
+			Boolean ageConfirmed, Boolean shareStats, @Valid Region region) {
+	}
+
+	public record Region(@NotBlank @Size(max = 16) String source, @Size(max = 64) String value, @NotNull Boolean eu) {
 	}
 
 	public record Onboarding(@NotNull Path path, @NotNull Metric metric, @Size(max = 60) String metricLabel,

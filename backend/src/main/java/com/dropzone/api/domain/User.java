@@ -131,6 +131,18 @@ public class User {
 
 	public boolean verifyRequestPushes = true;
 
+	public boolean shareStats;
+
+	public Instant shareStatsAt;
+
+	public String regionSource;
+
+	public String regionValue;
+
+	public Boolean regionEu;
+
+	public Instant regionAt;
+
 	public Instant suspendedAt;
 
 	@Column(updatable = false)

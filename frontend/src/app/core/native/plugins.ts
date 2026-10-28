@@ -32,6 +32,8 @@ export const AppLock = registerPlugin<AppLockPlugin>('AppLock', {
 
 export interface AppSettingsPlugin {
   openNotificationSettings(): Promise<void>;
+  setIconTheme(options: { theme: 'NEON' | 'STEALTH' }): Promise<void>;
+  getRegion(): Promise<{ sim: string; network: string; locale: string }>;
 }
 
 export const AppSettings = registerPlugin<AppSettingsPlugin>('AppSettings', {

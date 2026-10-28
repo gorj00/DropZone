@@ -5,6 +5,7 @@ import { AuthService } from '../../core/auth';
 import { ConfigService, PLAY_LISTING_URL, openExternal } from '../../core/config.service';
 import { DataExportService } from '../../core/data-export';
 import { DisclosureKind, DisclosureService } from '../../core/native/disclosure';
+import { RegionService } from '../../core/region';
 import { SessionStore } from '../../core/session.store';
 import { ToastService } from '../../core/toast.service';
 import { Badge } from '../../ui/badge';
@@ -196,6 +197,15 @@ export class DisclosureGate {
         <input type="checkbox" class="w-5 h-5 flex-none accent-accent" [checked]="adult()" (change)="adult.set($any($event.target).checked)" />
         <span class="font-semibold text-[14.5px] leading-snug">I'm 18 or older</span>
       </label>
+      @if (eu()) {
+        <label class="card mt-2.5 w-full max-w-[300px] px-3.5 py-3 flex items-start gap-3 text-left cursor-pointer">
+          <input type="checkbox" class="w-5 h-5 mt-0.5 flex-none accent-accent" [checked]="share()" (change)="share.set($any($event.target).checked)" />
+          <span class="leading-snug">
+            <span class="block font-semibold text-[14.5px]">Share anonymised statistics</span>
+            <span class="block text-[12.5px] text-mute mt-0.5">Optional. Combined numbers about goals and habits that can't identify you. You can change this in Settings.</span>
+          </span>
+        </label>
+      }
       <button class="btn btn-primary mt-4 max-w-[280px]" [disabled]="busy() || !adult()" (click)="accept()">{{ busy() ? 'Saving…' : 'Accept' }}</button>
     </div>
   `
@@ -205,10 +215,13 @@ export class ConsentGate {
   private readonly session = inject(SessionStore);
   private readonly configs = inject(ConfigService);
   private readonly toast = inject(ToastService);
+  private readonly region = inject(RegionService);
 
   protected readonly config = this.configs.config;
   protected readonly busy = signal(false);
   protected readonly adult = signal(false);
+  protected readonly share = signal(false);
+  protected readonly eu = this.region.eu;
 
   constructor() {
     if (!this.config()) void this.configs.load();
@@ -228,7 +241,8 @@ export class ConsentGate {
         this.toast.show('No connection to the server. Try again.', true);
         return;
       }
-      this.session.setUser(await this.api.acceptConsent(config.termsVersion, config.privacyVersion));
+      const region = this.region.region();
+      this.session.setUser(await this.api.acceptConsent(config.termsVersion, config.privacyVersion, region.eu ? this.share() : true, region));
     } catch (e) {
       if (apiError(e).status === 409) {
         await this.configs.load();

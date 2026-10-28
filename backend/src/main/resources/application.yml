@@ -63,5 +63,5 @@ dropzone:
     invoker: ${JOBS_INVOKER:}
   moderation:
     min-reporter-age: ${MIN_REPORTER_AGE:3d}
-  invite-base-url: https://dropzone.app/invite/
+  invite-base-url: https://dropzone.mobi/invite/
   admin-emails: ${ADMIN_EMAILS:}

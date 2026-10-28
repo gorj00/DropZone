@@ -107,10 +107,10 @@ class ModerationRulesIntegrationTest extends IntegrationTest {
 	}
 
 	@Test
-	void onlyPhotosVisibleToEveryoneAreCheckedAndOnlyLikelyVerdictsHide() throws Exception {
+	void onlyPhotosVisibleToEveryoneAreCheckedAndOnlyLikelyNudityHides() throws Exception {
 		Session owner = loginPro("ScopeOwner");
 		String after = uniquePhoto(owner);
-		safeSearch.flag(stored(after), RACY);
+		safeSearch.flag(stored(after), ADULT);
 		String set = transformation(owner, uniquePhoto(owner), after, "FRIENDS");
 		assertThat((Object) JsonPath.read(set, "$.moderation")).isNull();
 		assertThat(safeSearch.wasChecked(stored(after))).isFalse();
@@ -124,6 +124,12 @@ class ModerationRulesIntegrationTest extends IntegrationTest {
 		String visible = transformation(owner, uniquePhoto(owner), borderline, "EVERYONE");
 		assertThat(safeSearch.wasChecked(stored(borderline))).isTrue();
 		assertThat((Object) JsonPath.read(visible, "$.moderation")).isNull();
+
+		String shirtless = uniquePhoto(owner);
+		safeSearch.flag(stored(shirtless), RACY);
+		String revealing = transformation(owner, uniquePhoto(owner), shirtless, "EVERYONE");
+		assertThat(safeSearch.wasChecked(stored(shirtless))).isTrue();
+		assertThat((Object) JsonPath.read(revealing, "$.moderation")).isNull();
 
 		String replaced = uniquePhoto(owner);
 		safeSearch.flag(stored(replaced), ADULT);

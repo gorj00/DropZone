@@ -10,6 +10,7 @@ $Secrets = @(
     'DB_PASSWORD=dev-dropzone-db-password:latest',
     'JWT_SECRET=dev-dropzone-jwt-secret:latest',
     'REVENUECAT_WEBHOOK_SECRET=dev-dropzone-revenuecat-webhook-secret:latest',
+    'REVENUECAT_API_KEY=dev-dropzone-revenuecat-api-key:latest',
     'UNSPLASH_ACCESS_KEY=dev-dropzone-unsplash-access-key:latest'
 ) -join ','
 

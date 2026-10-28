@@ -9,6 +9,7 @@ import {
   ReportedItem, ReportTarget, SlipUp, SlipUpType, Stats, Today, TodayQuest, Transformation, TransformationRequest, User, UserPatch,
   UserQuest, UserSummary
 } from './models';
+import type { Region } from '../region';
 
 export const API_URL = Capacitor.getPlatform() === 'android' ? environment.androidApiUrl : environment.apiUrl;
 
@@ -54,7 +55,7 @@ export class ApiService {
     return { user: res.body as User, token: res.headers.get('X-Auth-Token') };
   }
   config() { return this.get<AppConfig>('/config'); }
-  acceptConsent(termsVersion: string, privacyVersion: string) { return this.post<User>('/me/consent', { termsVersion, privacyVersion, ageConfirmed: true }); }
+  acceptConsent(termsVersion: string, privacyVersion: string, shareStats: boolean, region: Region) { return this.post<User>('/me/consent', { termsVersion, privacyVersion, ageConfirmed: true, shareStats, region }); }
   async exportData(): Promise<{ json: string; filename: string | null }> {
     const res = await firstValueFrom(this.http.get(this.base + '/me/export', { observe: 'response', responseType: 'text' }));
     const name = /filename="?([^";]+)"?/i.exec(res.headers.get('Content-Disposition') ?? '')?.[1] ?? null;

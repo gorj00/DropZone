@@ -62,6 +62,7 @@ export interface User {
   hiddenFromSearch?: boolean;
   hiddenFromLeaderboards?: boolean;
   verifyRequestPushes?: boolean;
+  shareStats?: boolean;
 }
 
 export interface AppConfig {
@@ -581,7 +582,7 @@ export interface CustomQuestRequest {
   checkAudience?: CheckAudience;
 }
 
-export type UserPatch = Partial<Pick<User, 'displayName' | 'handle' | 'theme' | 'unlockMode' | 'minutesPerQuest' | 'publicByDefault' | 'defaultVerification' | 'slipUpTracking' | 'timezone' | 'weightUnit' | 'lengthUnit' | 'bio' | 'skipRestDays' | 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'verifyRequestPushes'>> & { avatarUrl?: string; trialEndAcknowledged?: boolean; proEndAcknowledged?: boolean };
+export type UserPatch = Partial<Pick<User, 'displayName' | 'handle' | 'theme' | 'unlockMode' | 'minutesPerQuest' | 'publicByDefault' | 'defaultVerification' | 'slipUpTracking' | 'timezone' | 'weightUnit' | 'lengthUnit' | 'bio' | 'skipRestDays' | 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'verifyRequestPushes' | 'shareStats'>> & { avatarUrl?: string; trialEndAcknowledged?: boolean; proEndAcknowledged?: boolean; region?: { source: string; value: string; eu: boolean } };
 
 export type CheckpointPatch = Partial<Pick<Checkpoint, 'rewardTitle' | 'rewardImageUrl' | 'rewardImageCredit' | 'isPublic' | 'visibility' | 'verification' | 'deadline' | 'targetValue'>>;
 

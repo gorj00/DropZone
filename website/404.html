@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DropZone</title>
+  <meta name="theme-color" content="#0b0826">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="/icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css?v=2">
+</head>
+<body>
+  <header class="nav">
+    <div class="wrap">
+      <a class="brand" href="/"><img src="/icon.png" alt=""><span>DROP<em>ZONE</em></span></a>
+      <nav class="nav-links"><a class="btn sm" href="https://play.google.com/store/apps/details?id=com.dropzone.app">Get the app</a></nav>
+    </div>
+  </header>
+  <main class="page">
+    <section class="center">
+      <img class="app" src="/icon.png" alt="DropZone app icon">
+      <h1 id="title">Page not found</h1>
+      <p id="text">This page doesn't exist.</p>
+      <div class="actions">
+        <a class="btn" id="open" href="/" hidden>Open in DropZone</a>
+        <a class="btn ghost" id="play" href="https://play.google.com/store/apps/details?id=com.dropzone.app" hidden>Get it on Google Play</a>
+        <a class="btn ghost" id="home" href="/">Go to dropzone.mobi</a>
+      </div>
+    </section>
+  </main>
+  <footer>
+    <div class="wrap">
+      <span>&copy; 2026 DropZone</span>
+      <nav>
+        <a href="/privacy/">Privacy Policy</a>
+        <a href="/terms/">Terms of Service</a>
+        <a href="/delete-account/">Delete your account</a>
+        <a href="mailto:info@dropzone.mobi">info@dropzone.mobi</a>
+      </nav>
+    </div>
+  </footer>
+  <script>
+    (function () {
+      var path = location.pathname;
+      var invite = /^\/invite\/([A-Za-z0-9_-]{1,32})\/?$/.exec(path);
+      var proof = /^\/p\/([A-Za-z0-9_-]{1,64})\/?$/.exec(path);
+      if (!invite && !proof) return;
+      document.getElementById('title').textContent = invite ? 'You’re invited' : 'A DropZone proof';
+      document.getElementById('text').textContent = invite
+        ? 'A friend invited you to DropZone. Install the app, then open this link again to connect.'
+        : 'Someone shared their progress from DropZone. Open it in the app to see and verify it.';
+      document.title = invite ? 'You’re invited to DropZone' : 'DropZone proof';
+      var open = document.getElementById('open');
+      open.href = invite ? 'dropzone://invite/' + invite[1] : 'dropzone://p/' + proof[1];
+      open.hidden = false;
+      document.getElementById('play').hidden = false;
+      document.getElementById('home').hidden = true;
+    })();
+  </script>
+</body>
+</html>

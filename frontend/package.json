@@ -11,7 +11,8 @@
     "start:dev": "ng serve --configuration dev",
     "android:dev": "ng build --configuration dev && npx cap sync android",
     "android:prod": "ng build --configuration production && npx cap sync android",
-    "android:bump": "node android/bump-version.mjs"
+    "android:bump": "node android/bump-version.mjs",
+    "icons": "node assets/build-icons.mjs"
   },
   "private": true,
   "packageManager": "npm@10.9.8",

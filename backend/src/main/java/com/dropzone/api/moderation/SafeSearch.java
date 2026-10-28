@@ -24,7 +24,7 @@ public interface SafeSearch {
 	record Verdict(Likelihood adult, Likelihood racy) {
 
 		public boolean flagged() {
-			return adult.likely() || racy.likely();
+			return adult.likely();
 		}
 	}
 }

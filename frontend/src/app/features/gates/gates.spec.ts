@@ -6,6 +6,7 @@ import { API_URL } from '../../core/api/api.service';
 import { AppConfig, User } from '../../core/api/models';
 import { isUpdateRequired } from '../../core/config.service';
 import { LockService } from '../../core/native/lock';
+import { Region, RegionService } from '../../core/region';
 import { SessionStore } from '../../core/session.store';
 import { ToastService } from '../../core/toast.service';
 import { ConsentGate } from './gates';
@@ -16,7 +17,10 @@ const config = (patch: Partial<AppConfig> = {}): AppConfig => ({
   minVersionCode: 1, termsVersion: '2026-10', privacyVersion: '2026-11', termsUrl: null, privacyUrl: null, deleteAccountUrl: null, ...patch
 });
 
-function render() {
+const US: Region = { source: 'SIM', value: 'US', eu: false };
+const CZ: Region = { source: 'SIM', value: 'CZ', eu: true };
+
+function render(region: Region = US) {
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(),
@@ -25,6 +29,7 @@ function render() {
       { provide: LockService, useValue: { native: false, disable: vi.fn().mockResolvedValue(undefined) } }
     ]
   });
+  TestBed.inject(RegionService).region.set(region);
   const session = TestBed.inject(SessionStore);
   session.setUser(user(true));
   const fixture = TestBed.createComponent(ConsentGate);
@@ -85,7 +90,8 @@ describe('ConsentGate', () => {
     el.querySelector('button')!.click();
     const req = await vi.waitFor(() => http.expectOne(`${API_URL}/me/consent`));
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ termsVersion: '2026-10', privacyVersion: '2026-11', ageConfirmed: true });
+    expect(req.request.body).toEqual({ termsVersion: '2026-10', privacyVersion: '2026-11', ageConfirmed: true, shareStats: true, region: US });
+    expect(el.textContent).not.toContain('Share anonymised statistics');
     req.flush(user(false));
     await fixture.whenStable();
 
@@ -106,7 +112,33 @@ describe('ConsentGate', () => {
     expect(session.user()?.consentRequired).toBe(true);
     el.querySelector('button')!.click();
     const retry = await vi.waitFor(() => http.expectOne(`${API_URL}/me/consent`));
-    expect(retry.request.body).toEqual({ termsVersion: '2026-12', privacyVersion: '2026-11', ageConfirmed: true });
+    expect(retry.request.body).toEqual({ termsVersion: '2026-12', privacyVersion: '2026-11', ageConfirmed: true, shareStats: true, region: US });
+  });
+
+  it('asks EU users to opt in to anonymised statistics, off by default', async () => {
+    const { fixture, http, el } = render(CZ);
+    http.expectOne(`${API_URL}/config`).flush(config());
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(el.textContent).toContain('Share anonymised statistics');
+    tickAge(fixture, el);
+    el.querySelector('button')!.click();
+    expect((await vi.waitFor(() => http.expectOne(`${API_URL}/me/consent`))).request.body).toEqual(
+      { termsVersion: '2026-10', privacyVersion: '2026-11', ageConfirmed: true, shareStats: false, region: CZ });
+  });
+
+  it('sends the opt-in when an EU user ticks it', async () => {
+    const { fixture, http, el } = render(CZ);
+    http.expectOne(`${API_URL}/config`).flush(config());
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    tickAge(fixture, el);
+    (el.querySelectorAll('input[type=checkbox]')[1] as HTMLInputElement).click();
+    fixture.detectChanges();
+    el.querySelector('button')!.click();
+    expect((await vi.waitFor(() => http.expectOne(`${API_URL}/me/consent`))).request.body.shareStats).toBe(true);
   });
 });
 

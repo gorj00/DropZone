@@ -53,7 +53,7 @@ class FriendsIntegrationTest extends IntegrationTest {
 
 		get(carol, "/api/v1/social/invite").andExpect(status().isOk())
 				.andExpect(jsonPath("$.code").value(carol.inviteCode()))
-				.andExpect(jsonPath("$.url").value("https://dropzone.app/invite/" + carol.inviteCode()));
+				.andExpect(jsonPath("$.url").value("https://dropzone.mobi/invite/" + carol.inviteCode()));
 		post(dave, "/api/v1/social/invite/" + carol.inviteCode() + "/accept", null).andExpect(status().isOk())
 				.andExpect(jsonPath("$.user.id").value(carol.id().toString()))
 				.andExpect(jsonPath("$.relation").value("REQUESTED"));

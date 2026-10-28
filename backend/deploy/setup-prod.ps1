@@ -81,6 +81,10 @@ foreach ($name in $jobs.Keys) {
         --uri "$JobsUrl/$name" --http-method POST --oidc-service-account-email $Scheduler --oidc-token-audience $JobsUrl --attempt-deadline 300s --quiet
 }
 
+if (-not (Exists { gcloud beta run domain-mappings describe --domain api.dropzone.mobi --region $Region --project $Project })) {
+    gcloud beta run domain-mappings create --service dropzone-api --domain api.dropzone.mobi --region $Region --project $Project
+}
+
 & (Join-Path $PSScriptRoot 'setup-monitoring.ps1')
 
-Write-Host 'Production is set up: https://dropzone-api-258611697847.europe-west4.run.app'
+Write-Host 'Production is set up: https://api.dropzone.mobi (DNS: CNAME api -> ghs.googlehosted.com, DNS only in Cloudflare)'

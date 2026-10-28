@@ -41,7 +41,7 @@ public final class Dtos {
 			int bestStreak, String inviteCode, String timezone, boolean trial, Instant trialEndsAt, WeightUnit weightUnit,
 			LengthUnit lengthUnit, boolean admin, String bio, boolean trialEndPending, boolean consentRequired, boolean suspended,
 			boolean willRenew, String proProductId, boolean billingIssue, boolean proEndPending, boolean skipRestDays,
-			boolean hiddenFromSearch, boolean hiddenFromLeaderboards, boolean verifyRequestPushes) {
+			boolean hiddenFromSearch, boolean hiddenFromLeaderboards, boolean verifyRequestPushes, boolean shareStats) {
 	}
 
 	public record PublicConfigDto(int minVersionCode, String termsVersion, String privacyVersion, String termsUrl, String privacyUrl,

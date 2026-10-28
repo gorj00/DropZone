@@ -153,7 +153,21 @@ public class UserService {
 				user.timezone, user.isTrialActive(now) && !user.isSubscribed(now), user.trialEndsAt, user.weightUnit, user.lengthUnit,
 				isAdmin(user), user.bio, user.isTrialEndPending(now), consentRequired(user), user.isSuspended(),
 				user.willRenew && user.isSubscribed(now), user.proProductId, user.billingIssueAt != null, user.isProEndPending(now),
-				user.skipRestDays, user.hiddenFromSearch, user.hiddenFromLeaderboards, user.verifyRequestPushes);
+				user.skipRestDays, user.hiddenFromSearch, user.hiddenFromLeaderboards, user.verifyRequestPushes, user.shareStats);
+	}
+
+	private static void setShareStats(User user, boolean share, Instant now) {
+		if (user.shareStats != share || user.shareStatsAt == null) {
+			user.shareStats = share;
+			user.shareStatsAt = now;
+		}
+	}
+
+	private static void setRegion(User user, Requests.Region region, Instant now) {
+		user.regionSource = region.source().trim();
+		user.regionValue = region.value() == null ? null : region.value().trim();
+		user.regionEu = region.eu();
+		user.regionAt = now;
 	}
 
 	public boolean consentRequired(User user) {
@@ -177,6 +191,12 @@ public class UserService {
 		user.privacyVersion = legal.privacyVersion();
 		user.termsAcceptedAt = now;
 		user.ageConfirmedAt = now;
+		if (req.shareStats() != null) {
+			setShareStats(user, req.shareStats(), now);
+		}
+		if (req.region() != null) {
+			setRegion(user, req.region(), now);
+		}
 		return toDto(user);
 	}
 
@@ -291,6 +311,12 @@ public class UserService {
 		}
 		if (req.verifyRequestPushes() != null) {
 			user.verifyRequestPushes = req.verifyRequestPushes();
+		}
+		if (req.shareStats() != null) {
+			setShareStats(user, req.shareStats(), clock.instant());
+		}
+		if (req.region() != null) {
+			setRegion(user, req.region(), clock.instant());
 		}
 		if (req.weightUnit() != null) {
 			user.weightUnit = req.weightUnit();

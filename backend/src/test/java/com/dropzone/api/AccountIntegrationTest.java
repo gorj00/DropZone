@@ -73,6 +73,20 @@ class AccountIntegrationTest extends IntegrationTest {
 	}
 
 	@Test
+	void consentStoresTheStatsChoice() throws Exception {
+		Session user = login("StatsChoice");
+		get(user, "/api/v1/me").andExpect(jsonPath("$.shareStats").value(false));
+		post(user, "/api/v1/me/consent", "{\"termsVersion\":\"1\",\"privacyVersion\":\"1\",\"ageConfirmed\":true,\"shareStats\":true,"
+				+ "\"region\":{\"source\":\"SIM\",\"value\":\"CZ\",\"eu\":true}}")
+				.andExpect(status().isOk()).andExpect(jsonPath("$.shareStats").value(true));
+		assertThat(jdbc.queryForObject("select share_stats_at from users where id = ?", Timestamp.class, user.id())).isNotNull();
+		assertThat(jdbc.queryForObject("select region_source || ':' || region_value || ':' || region_eu from users where id = ?", String.class, user.id()))
+				.isEqualTo("SIM:CZ:true");
+		patch(user, "/api/v1/me", "{\"shareStats\":false}").andExpect(status().isOk()).andExpect(jsonPath("$.shareStats").value(false));
+		assertThat(jdbc.queryForObject("select share_stats from users where id = ?", Boolean.class, user.id())).isFalse();
+	}
+
+	@Test
 	void consentNeedsTheAgeConfirmation() throws Exception {
 		Session user = login("AgeGate");
 		post(user, "/api/v1/me/consent", "{\"termsVersion\":\"1\",\"privacyVersion\":\"1\"}").andExpect(status().isBadRequest())

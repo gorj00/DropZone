@@ -1,5 +1,7 @@
 import { Injectable, effect, signal } from '@angular/core';
+import { Capacitor } from '@capacitor/core';
 import { Theme } from './api/models';
+import { AppSettings } from './native/plugins';
 
 const KEY = 'dz-theme';
 
@@ -13,6 +15,7 @@ export class ThemeService {
       document.documentElement.dataset['theme'] = t === 'STEALTH' ? 'stealth' : 'neon';
       document.querySelector('meta[name="theme-color"]')?.setAttribute('content', t === 'STEALTH' ? '#08090c' : '#0d0a2b');
       try { localStorage.setItem(KEY, t); } catch { }
+      if (Capacitor.isNativePlatform()) void AppSettings.setIconTheme({ theme: t }).catch(() => undefined);
     });
   }
 

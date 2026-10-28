@@ -5,5 +5,5 @@ export const environment = {
   googleWebClientId: '',
   revenueCatApiKey: '',
   devLoginPath: '/auth/dev' as string | null,
-  inviteBaseUrl: 'https://dropzone.app/invite/'
+  inviteBaseUrl: 'https://dropzone.mobi/invite/'
 };

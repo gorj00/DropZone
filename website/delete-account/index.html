@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Delete your DropZone account</title>
+  <meta name="theme-color" content="#0b0826">
+  <link rel="icon" href="/icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css?v=2">
+  <script src="https://accounts.google.com/gsi/client" async></script>
+</head>
+<body>
+  <header class="nav">
+    <div class="wrap">
+      <a class="brand" href="/"><img src="/icon.png" alt=""><span>DROP<em>ZONE</em></span></a>
+      <nav class="nav-links"><a class="btn sm" href="https://play.google.com/store/apps/details?id=com.dropzone.app">Get the app</a></nav>
+    </div>
+  </header>
+  <main class="page">
+    <h1>Delete your DropZone account</h1>
+    <p>You can delete your account in the app under Settings, or here by signing in with the same Google account you use in DropZone.</p>
+    <p>Deleting removes your account and everything in it: your profile, goals, milestones, proofs and photos, posts, comments, friends and notifications. This can't be undone.</p>
+    <p class="note">Deleting the account does not cancel a Google Play subscription. Cancel it in Google Play under Payments &amp; subscriptions.</p>
+
+    <section id="signin">
+      <div id="google"></div>
+    </section>
+
+    <section id="confirm" hidden>
+      <p>Signed in as <strong id="who"></strong>.</p>
+      <div class="actions" style="justify-content:flex-start">
+        <button class="btn danger" id="delete">Delete my account permanently</button>
+        <button class="btn ghost" id="cancel">Cancel</button>
+      </div>
+    </section>
+
+    <section id="done" hidden>
+      <h2>Your account was deleted</h2>
+      <p>All your DropZone data is gone. If you had a subscription, remember to cancel it in Google Play.</p>
+    </section>
+
+    <p class="status" id="status" role="status"></p>
+
+  </main>
+  <footer>
+    <div class="wrap">
+      <span>&copy; 2026 DropZone</span>
+      <nav>
+        <a href="/privacy/">Privacy Policy</a>
+        <a href="/terms/">Terms of Service</a>
+        <a href="/delete-account/">Delete your account</a>
+        <a href="mailto:info@dropzone.mobi">info@dropzone.mobi</a>
+      </nav>
+    </div>
+  </footer>
+  <script>
+    (function () {
+      var API = 'https://api.dropzone.mobi/api/v1';
+      var CLIENT_ID = '258611697847-lhok4qitopc3a0hnpm3129avrvbb97q5.apps.googleusercontent.com';
+      var token = null;
+      var status = document.getElementById('status');
+
+      function show(id) {
+        ['signin', 'confirm', 'done'].forEach(function (s) { document.getElementById(s).hidden = s !== id; });
+      }
+
+      function say(text, error) {
+        status.textContent = text || '';
+        status.className = error ? 'status error' : 'status';
+      }
+
+      function message(res, fallback) {
+        return res.json().then(function (b) { return (b && b.message) || fallback; }, function () { return fallback; });
+      }
+
+      function signedIn(response) {
+        say('Checking your account…');
+        fetch(API + '/auth/google', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken: response.credential })
+        }).then(function (res) {
+          if (!res.ok) return message(res, 'Sign-in failed. Try again.').then(function (m) { throw new Error(m); });
+          return res.json();
+        }).then(function (body) {
+          token = body.token;
+          document.getElementById('who').textContent = body.user.email || body.user.displayName || 'your account';
+          say('');
+          show('confirm');
+        }).catch(function (e) { say(e.message || 'Sign-in failed. Try again.', true); });
+      }
+
+      document.getElementById('delete').addEventListener('click', function () {
+        var button = this;
+        button.disabled = true;
+        say('Deleting…');
+        fetch(API + '/me', { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } }).then(function (res) {
+          if (res.status !== 204 && !res.ok) return message(res, 'Deleting failed. Try again or write to info@dropzone.mobi.').then(function (m) { throw new Error(m); });
+          token = null;
+          say('');
+          show('done');
+        }).catch(function (e) {
+          button.disabled = false;
+          say(e.message, true);
+        });
+      });
+
+      document.getElementById('cancel').addEventListener('click', function () {
+        token = null;
+        say('');
+        show('signin');
+      });
+
+      window.addEventListener('load', function () {
+        if (!window.google || !google.accounts) {
+          say('Google sign-in could not load. Check your connection and reload the page.', true);
+          return;
+        }
+        google.accounts.id.initialize({ client_id: CLIENT_ID, callback: signedIn });
+        google.accounts.id.renderButton(document.getElementById('google'), { theme: 'filled_black', size: 'large', text: 'signin_with', shape: 'pill', locale: 'en' });
+      });
+    })();
+  </script>
+</body>
+</html>

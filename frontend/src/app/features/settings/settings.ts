@@ -16,6 +16,7 @@ import { HealthService } from '../../core/native/health';
 import { LockService } from '../../core/native/lock';
 import { PushService } from '../../core/native/push';
 import { PromptService } from '../../core/prompt.service';
+import { RegionService } from '../../core/region';
 import { SessionStore } from '../../core/session.store';
 import { CatalogStore, GoalStore, TodayStore } from '../../core/stores';
 import { ThemeService } from '../../core/theme.service';
@@ -30,7 +31,7 @@ import { GoalKind, QuestSchedule, daysLabel, goalKindOf, goalOf, goalText } from
 import { DeleteAccountSheet } from './delete-account';
 
 type Section = 'apps' | 'unlock' | 'quests' | 'verify' | 'blocked';
-type Flag = 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'verifyRequestPushes';
+type Flag = 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'verifyRequestPushes' | 'shareStats';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -367,6 +368,9 @@ type Flag = 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'verifyRequestPushes
             }
             <ng-container *ngTemplateOutlet="switchRow; context: { key: 'hiddenFromSearch', on: !!u.hiddenFromSearch, title: 'Hide me from search', text: 'Nobody finds you by @handle or name. Your invite link still works.' }" />
             <ng-container *ngTemplateOutlet="switchRow; context: { key: 'hiddenFromLeaderboards', on: !!u.hiddenFromLeaderboards, title: 'Hide me from leaderboards', text: 'You are left out of your friends’ boards. You still see your own place.' }" />
+            @if (eu()) {
+              <ng-container *ngTemplateOutlet="switchRow; context: { key: 'shareStats', on: !!u.shareStats, title: 'Share anonymised statistics', text: 'Combined numbers about goals and habits that can’t identify you.' }" />
+            }
             <button class="w-full flex items-center gap-3 px-3.5 h-[50px] text-left" (click)="toggleBlocked()">
               <span class="flex-1 font-semibold text-[14.5px]">Blocked users</span>
               @if (blocked(); as list) { <span class="text-[13px] text-mute font-semibold">{{ list.length }}</span> }
@@ -462,6 +466,8 @@ export class SettingsPage {
   private readonly configs = inject(ConfigService);
   private readonly push = inject(PushService);
   private readonly dataExport = inject(DataExportService);
+  private readonly region = inject(RegionService);
+  protected readonly eu = this.region.eu;
   private readonly audience = inject(AudienceService);
   private readonly goals = inject(GoalStore);
   private resumeHandle: PluginListenerHandle | null = null;
@@ -688,7 +694,7 @@ export class SettingsPage {
     const on = key === 'verifyRequestPushes' ? u.verifyRequestPushes !== false : !!u[key];
     this.busy.set(true);
     try {
-      await this.session.update({ [key]: !on });
+      await this.session.update(key === 'shareStats' ? { shareStats: !on, region: this.region.region() } : { [key]: !on });
     } catch (e) {
       this.toast.error(e);
     } finally {

@@ -16,7 +16,7 @@ async function render(pro: boolean) {
   const api = {
     friends: vi.fn().mockResolvedValue([]),
     friendRequests: vi.fn().mockResolvedValue({ incoming: [request], outgoing: [] }),
-    invite: vi.fn().mockResolvedValue({ code: 'ABC', url: 'https://dropzone.app/invite/ABC' }),
+    invite: vi.fn().mockResolvedValue({ code: 'ABC', url: 'https://dropzone.mobi/invite/ABC' }),
     searchUsers: vi.fn().mockResolvedValue([mia]),
     acceptFriendRequest: vi.fn().mockResolvedValue(mia),
     deleteFriendRequest: vi.fn().mockResolvedValue(undefined)

@@ -48,6 +48,6 @@ describe('PeopleRow', () => {
 
 describe('proofLink', () => {
   it('points at the proof on the app domain', () => {
-    expect(proofLink('abc')).toBe('https://dropzone.app/p/abc');
+    expect(proofLink('abc')).toBe('https://dropzone.mobi/p/abc');
   });
 });
