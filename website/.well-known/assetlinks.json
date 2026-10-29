@@ -1,10 +1,13 @@
 [
   {
-    "relation": ["delegate_permission/common.handle_all_urls"],
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
     "target": {
       "namespace": "android_app",
       "package_name": "com.dropzone.app",
       "sha256_cert_fingerprints": [
+        "B7:F5:F5:AC:0B:44:79:02:D2:E2:FD:C4:9D:0E:8A:C4:12:A6:56:55:5A:4A:EB:81:05:96:A1:0F:C4:9A:79:69",
         "FB:4C:C4:7D:4E:1F:6B:D0:C9:0F:D8:14:95:AE:BE:F1:40:0E:DA:82:EE:31:91:EB:35:8E:12:5D:7C:9B:CE:CA",
         "B0:A1:5B:BC:ED:B7:91:3D:2E:6F:7B:75:F8:C5:02:BF:B1:30:B7:E7:9C:64:9A:22:C3:2A:2A:0E:1F:50:35:82"
       ]
