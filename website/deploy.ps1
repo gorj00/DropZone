@@ -6,8 +6,8 @@ $Bucket = 'dropzone.mobi'
 $Deployer = "github-deployer@$Project.iam.gserviceaccount.com"
 $Site = $PSScriptRoot
 
-$types = @{ '.html' = 'text/html; charset=utf-8'; '.css' = 'text/css; charset=utf-8'; '.json' = 'application/json'; '.png' = 'image/png'; '.jpg' = 'image/jpeg' }
-$cache = @{ '.html' = 'no-cache'; '.json' = 'public, max-age=300'; '.css' = 'public, max-age=3600'; '.png' = 'public, max-age=86400'; '.jpg' = 'public, max-age=86400' }
+$types = @{ '.html' = 'text/html; charset=utf-8'; '.css' = 'text/css; charset=utf-8'; '.json' = 'application/json'; '.png' = 'image/png'; '.jpg' = 'image/jpeg'; '.mp4' = 'video/mp4' }
+$cache = @{ '.html' = 'no-cache'; '.json' = 'public, max-age=300'; '.css' = 'public, max-age=3600'; '.png' = 'public, max-age=86400'; '.jpg' = 'public, max-age=86400'; '.mp4' = 'public, max-age=604800' }
 
 gcloud storage buckets describe "gs://$Bucket" --project $Project *> $null
 if ($LASTEXITCODE -ne 0) {

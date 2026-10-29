@@ -272,6 +272,9 @@ footer a:hover { color: var(--text); }
 .float .dot.gold { background: rgba(255, 211, 77, .15); color: var(--gold); }
 .float .dot.cyan { background: rgba(61, 240, 255, .15); color: var(--accent-2); }
 
+.video { margin-top: 36px; aspect-ratio: 16 / 9; border-radius: 26px; overflow: hidden; background: #000; border: 1px solid var(--line); box-shadow: 0 40px 90px -40px rgba(0, 0, 0, .9), 0 0 80px -30px rgba(255, 46, 126, .5); }
+.video video { display: block; width: 100%; height: 100%; }
+
 .steps.four { grid-template-columns: repeat(4, 1fr); }
 .step .ic { position: absolute; top: 26px; right: 22px; width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; }
 .step .ic svg { width: 22px; height: 22px; }
