@@ -91,6 +91,7 @@
 
     <queries>
         <package android:name="com.google.android.apps.healthdata" />
+        <package android:name="com.android.settings" />
     </queries>
 
     <uses-feature android:name="android.hardware.camera" android:required="false" />

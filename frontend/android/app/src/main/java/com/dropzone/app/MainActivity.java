@@ -13,4 +13,11 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(AppSettingsPlugin.class);
         super.onCreate(savedInstanceState);
     }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        AppLockPlugin.stopHints();
+        AppLockPlugin.guiding = false;
+    }
 }

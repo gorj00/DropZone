@@ -145,7 +145,9 @@ describe('BillingService.purchase', () => {
     const { billing, session, http } = await setup();
     await billing.init();
 
-    expect(await billing.purchase('pro_monthly')).toBe('done');
+    const result = billing.purchase('pro_monthly');
+    (await expect1(http, 'POST', '/billing/refresh')).flush(user({ pro: false }));
+    expect(await result).toBe('done');
 
     (await expect1(http, 'POST', '/billing/refresh')).flush(user({ pro: false }));
     (await expect1(http, 'GET', '/me')).flush(user({ pro: false }));
@@ -160,7 +162,9 @@ describe('BillingService.purchase', () => {
   it('never throws after a confirmed purchase when the refresh fails', async () => {
     const { billing, session, http } = await setup();
     await billing.init();
-    expect(await billing.purchase('pro_yearly')).toBe('done');
+    const result = billing.purchase('pro_yearly');
+    (await expect1(http, 'POST', '/billing/refresh')).flush({ code: 'INTERNAL', message: 'Down' }, { status: 500, statusText: 'Error' });
+    expect(await result).toBe('done');
     (await expect1(http, 'POST', '/billing/refresh')).flush({ code: 'INTERNAL', message: 'Down' }, { status: 500, statusText: 'Error' });
     (await expect1(http, 'GET', '/me')).error(new ProgressEvent('error'));
     await session.clear();
@@ -223,9 +227,11 @@ describe('BillingService.purchase', () => {
   });
 
   it('replaces the current subscription when a subscriber switches plan', async () => {
-    const { billing, sdk, session } = await setup({ user: { pro: true, proProductId: 'pro_monthly:monthly', willRenew: true } });
+    const { billing, sdk, session, http } = await setup({ user: { pro: true, proProductId: 'pro_monthly:monthly', willRenew: true } });
     await billing.init();
-    await billing.purchase('pro_yearly');
+    const result = billing.purchase('pro_yearly');
+    (await expect1(http, 'POST', '/billing/refresh')).flush(user({ pro: true, proProductId: 'pro_yearly:yearly' }));
+    await result;
     expect(sdk.purchasePackage).toHaveBeenCalledWith(expect.objectContaining({
       aPackage: PACKAGES[2],
       storeProductChangeInfo: { oldProductIdentifier: 'pro_monthly' }
@@ -234,9 +240,11 @@ describe('BillingService.purchase', () => {
   });
 
   it('buys without a change for a trial user', async () => {
-    const { billing, sdk, session } = await setup({ user: { pro: true, trial: true } });
+    const { billing, sdk, session, http } = await setup({ user: { pro: true, trial: true } });
     await billing.init();
-    await billing.purchase('pro_monthly');
+    const result = billing.purchase('pro_monthly');
+    (await expect1(http, 'POST', '/billing/refresh')).flush(user({ pro: true, proProductId: 'pro_monthly:monthly' }));
+    await result;
     expect(sdk.purchasePackage.mock.calls[0][0]).not.toHaveProperty('storeProductChangeInfo');
     await session.clear();
   });

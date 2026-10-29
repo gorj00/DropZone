@@ -158,6 +158,7 @@ describe('PaywallPage', () => {
     const toast = TestBed.inject(ToastService);
 
     button('Subscribe')!.click();
+    (await vi.waitFor(() => http.expectOne(`${API_URL}/billing/refresh`))).flush(user({ pro: false }));
     await vi.waitFor(() => expect(toast.message()?.text).toBe('Welcome to PRO. Every quest is yours.'));
     expect(toast.message()?.error).toBe(false);
     expect(navigate).toHaveBeenCalledWith('/today');

@@ -193,16 +193,12 @@ export class BillingService {
       }
       throw e;
     }
-    if (hasPro(info)) {
-      void this.sync();
-      return 'done';
-    }
     try {
       this.session.setUser(await this.api.refreshBilling());
     } catch { }
     if (subscribed(this.session.user())) return 'done';
     void this.sync();
-    return 'pending';
+    return hasPro(info) ? 'done' : 'pending';
   }
 
   async restore(): Promise<boolean> {

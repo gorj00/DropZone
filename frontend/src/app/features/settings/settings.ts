@@ -283,7 +283,7 @@ type Flag = 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'verifyRequestPushes
               } @else if (lock.blocked()) {
                 <span class="tag tag-pro">Blocked</span>
               } @else if (lock.status()?.serviceEnabled) {
-                <span class="tag tag-free">On</span>
+                <button class="tag tag-free" (click)="manageLock()">On</button>
               } @else {
                 <button class="qbtn" (click)="enableLock()">Enable</button>
               }
@@ -859,6 +859,14 @@ export class SettingsPage {
       this.toast.error(e);
     } finally {
       this.busy.set(false);
+    }
+  }
+
+  protected async manageLock(): Promise<void> {
+    try {
+      await this.lock.manage();
+    } catch (e) {
+      this.toast.error(e);
     }
   }
 

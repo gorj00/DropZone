@@ -8,7 +8,7 @@ export const APP_LOCK = new InjectionToken<AppLockPlugin>('AppLock', {
   providedIn: 'root',
   factory: () => ({
     getStatus: () => AppLock.getStatus(),
-    openAccessibilitySettings: () => AppLock.openAccessibilitySettings(),
+    openAccessibilitySettings: options => AppLock.openAccessibilitySettings(options),
     openOverlaySettings: () => AppLock.openOverlaySettings(),
     setConfig: config => AppLock.setConfig(config)
   })
@@ -32,8 +32,12 @@ export class LockService {
 
   async openSettings(): Promise<boolean> {
     if (!(await this.disclosure.ask('ACCESSIBILITY'))) return false;
-    await this.plugin.openAccessibilitySettings();
+    await this.plugin.openAccessibilitySettings({ guide: true });
     return true;
+  }
+
+  async manage(): Promise<void> {
+    await this.plugin.openAccessibilitySettings();
   }
 
   async disable(): Promise<void> {

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, signal, untracked } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SessionStore } from '../../core/session.store';
 import { ThemeService } from '../../core/theme.service';
@@ -74,8 +74,10 @@ export class TrialEndedPage {
     : { icon: 'hourglass', title: 'trial has ended', text: 'Keep everything you used this week, or carry on with the free plan.' };
 
   constructor() {
-    const u = this.session.user();
-    if (!(this.pro ? u?.proEndPending : u?.trialEndPending)) void this.router.navigateByUrl('/today', { replaceUrl: true });
+    effect(() => {
+      const u = this.session.user();
+      if (!(this.pro ? u?.proEndPending : u?.trialEndPending)) untracked(() => void this.router.navigateByUrl('/today', { replaceUrl: true }));
+    });
   }
 
   protected plans(): void {

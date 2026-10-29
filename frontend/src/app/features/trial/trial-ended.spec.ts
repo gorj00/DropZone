@@ -102,4 +102,16 @@ describe('PRO-ended screen', () => {
     await vi.waitFor(() => expect(router.url).toBe('/today'));
     await session.clear();
   });
+
+  it('leaves as soon as a resubscription reaches the account', async () => {
+    const { session, router } = await setup({ proEndPending: true });
+    const harness = await RouterTestingHarness.create('/pro-ended');
+    harness.detectChanges();
+    expect(router.url).toBe('/pro-ended');
+
+    session.setUser(user({ pro: true, proEndPending: false }));
+    harness.detectChanges();
+    await vi.waitFor(() => expect(router.url).toBe('/today'));
+    await session.clear();
+  });
 });

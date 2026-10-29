@@ -27,6 +27,8 @@ import android.widget.TextView;
 
 import androidx.core.content.ContextCompat;
 
+import com.dropzone.app.MainActivity;
+
 public class AppLockService extends AccessibilityService {
 
     private static final String SYSTEM_UI = "com.android.systemui";
@@ -83,6 +85,16 @@ public class AppLockService extends AccessibilityService {
         super.onServiceConnected();
         instance = this;
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+        AppLockPlugin.stopHints();
+        if (AppLockPlugin.guiding) {
+            AppLockPlugin.guiding = false;
+            Intent back = new Intent(this, MainActivity.class);
+            back.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+            try {
+                startActivity(back);
+            } catch (Exception ignored) {
+            }
+        }
         if (!receiverRegistered) {
             IntentFilter filter = new IntentFilter();
             filter.addAction(Intent.ACTION_TIME_CHANGED);

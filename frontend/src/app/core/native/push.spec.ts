@@ -107,13 +107,10 @@ const putToken = (http: HttpTestingController) => vi.waitFor(() => http.expectOn
 describe('PushService registration', () => {
   beforeEach(() => localStorage.clear());
 
-  it('explains before the system prompt and asks only once', async () => {
+  it('shows only the system prompt and asks only once', async () => {
     const { push, plugin, prompt, http, session } = await setup();
-    const started = push.start();
-    await vi.waitFor(() => expect(prompt.confirmation()?.title).toBe('Turn on notifications?'));
-    expect(plugin.requestPermissions).not.toHaveBeenCalled();
-    prompt.answer(true);
-    await started;
+    await push.start();
+    expect(prompt.confirmation()).toBeNull();
 
     expect(plugin.requestPermissions).toHaveBeenCalledTimes(1);
     expect(push.permission()).toBe('granted');

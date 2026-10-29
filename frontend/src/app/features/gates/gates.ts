@@ -124,7 +124,7 @@ const DISCLOSURES: Record<DisclosureKind, { title: string; lead: string; icon: s
       { icon: 'eyeoff', title: 'Stays on your phone', text: 'It is checked on this phone only. It is never stored, sent to us or shared with anyone.' }
     ],
     yes: 'Agree',
-    footer: 'Next, Android opens Accessibility settings. Tap Installed apps (on some phones Downloaded apps), then DropZone, and turn it on. No such section? Find DropZone there and turn it on.'
+    footer: 'Next, Android opens Accessibility settings. Tap Installed apps (on some phones Downloaded apps), then DropZone app lock, and turn it on. No such section? Find DropZone app lock there and turn it on.'
   },
   HEALTH: {
     title: 'Connect Health Connect',

@@ -6,7 +6,6 @@ import { PermissionStatus, PushNotificationSchema, PushNotifications, PushNotifi
 import { ApiService } from '../api/api.service';
 import { openExternal } from '../config.service';
 import { isExternal, pushLink } from '../links';
-import { PromptService } from '../prompt.service';
 import { SessionStore } from '../session.store';
 import { NotificationsStore } from '../social';
 import { ToastService } from '../toast.service';
@@ -43,7 +42,6 @@ export class PushService {
   private readonly session = inject(SessionStore);
   private readonly notifications = inject(NotificationsStore);
   private readonly toast = inject(ToastService);
-  private readonly prompt = inject(PromptService);
   private readonly bridge = inject(PUSH);
   private readonly appSettings = inject(APP_SETTINGS);
   private started = false;
@@ -62,7 +60,7 @@ export class PushService {
     this.started = true;
     await this.listen();
     let state = await this.checkPermission();
-    if (state === 'prompt' && (await this.explain())) state = await this.request();
+    if (state === 'prompt' && (await this.firstAsk())) state = await this.request();
     if (state === 'granted') await this.register();
   }
 
@@ -111,10 +109,10 @@ export class PushService {
     else await this.router.navigateByUrl(link);
   }
 
-  private async explain(): Promise<boolean> {
+  private async firstAsk(): Promise<boolean> {
     if ((await Preferences.get({ key: PUSH_ASKED_KEY })).value) return false;
     await Preferences.set({ key: PUSH_ASKED_KEY, value: '1' });
-    return this.prompt.confirm('Turn on notifications?', 'Get your daily reminder, friend requests and proofs to verify. You can change this anytime in Settings.', 'Turn on', 'Not now');
+    return true;
   }
 
   private async request(): Promise<PushPermission> {

@@ -21,7 +21,7 @@ export interface AppLockConfig {
 
 export interface AppLockPlugin {
   getStatus(): Promise<AppLockStatus>;
-  openAccessibilitySettings(): Promise<void>;
+  openAccessibilitySettings(options?: { guide?: boolean }): Promise<void>;
   openOverlaySettings(): Promise<void>;
   setConfig(config: AppLockConfig): Promise<void>;
 }
