@@ -13,6 +13,8 @@ $Secrets = @(
     'REVENUECAT_WEBHOOK_SECRET=prod-dropzone-revenuecat-webhook-secret:latest',
     'UNSPLASH_ACCESS_KEY=prod-dropzone-unsplash-access-key:latest'
 ) -join ','
+gcloud secrets describe prod-dropzone-revenuecat-api-key --project $Project *> $null
+if ($LASTEXITCODE -eq 0) { $Secrets += ',REVENUECAT_API_KEY=prod-dropzone-revenuecat-api-key:latest' }
 
 docker build -t $Image $Backend
 if ($LASTEXITCODE -ne 0) { throw 'docker build failed' }

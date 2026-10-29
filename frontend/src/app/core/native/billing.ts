@@ -111,6 +111,7 @@ export class BillingService {
   private readonly bridge = inject(PURCHASES);
   private configured = false;
   private configuredFor: string | null = null;
+  private checkedFor: string | null = null;
   private syncing: Promise<void> | null = null;
 
   readonly enabled = this.bridge.native && !!this.bridge.apiKey;
@@ -137,6 +138,16 @@ export class BillingService {
     await this.loadPlans();
   }
 
+  async checkOnStart(): Promise<void> {
+    const user = this.session.user();
+    if (!user || subscribed(user) || this.checkedFor === user.id) return;
+    this.checkedFor = user.id;
+    try {
+      const fresh = await this.api.refreshBilling();
+      if (this.session.user()?.id === user.id) this.session.setUser(fresh);
+    } catch { }
+  }
+
   async retry(): Promise<void> {
     if (!this.enabled) return;
     if (this.configuredFor) await this.loadPlans();
@@ -146,6 +157,7 @@ export class BillingService {
   async logOut(): Promise<void> {
     const was = this.configuredFor;
     this.configuredFor = null;
+    this.checkedFor = null;
     this.plans.set(this.enabled ? [] : FALLBACK);
     this.prices.set(this.enabled ? 'loading' : 'ready');
     if (!this.enabled || !this.configured || !was) return;

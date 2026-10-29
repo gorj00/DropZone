@@ -28,3 +28,19 @@ Run before every Play upload, on a real phone (Android 13 or newer) with a Play 
 | 14 | Update install only | Still signed in, locked apps unchanged |
 
 Write the version code, device, date and any failure in the release notes. Any failed row blocks the upload.
+
+## Subscriptions
+
+Run with the license tester (test purchases, no real charge). Test renewals are fast: weekly and monthly renew every 5 minutes, yearly every 30 minutes, at most 6 times. After each row check Settings → PRO and the Cloud Run logs for the RevenueCat webhook.
+
+| # | Do | Expect |
+|---|----|--------|
+| S1 | Paywall → Monthly → Subscribe | PRO active; Settings shows Monthly and the renewal date |
+| S2 | Paywall → Yearly → "Switch to Yearly" | Google Play replaces the plan (no second subscription in Play → Payments & subscriptions); Settings shows Yearly |
+| S3 | Paywall → Weekly → "Switch to Weekly" | Same as S2, Settings shows Weekly |
+| S4 | Wait for one renewal | Still PRO, new renewal date |
+| S5 | Cancel in Google Play | Settings shows "Ends …"; PRO until then, then "Your PRO subscription ended" message and Free |
+| S6 | Subscribe again after it ended | "Welcome back to PRO", PRO settings back |
+| S7 | Uninstall, install, sign in, Paywall → Restore purchases | PRO restored |
+| S8 | Change the payment method to "Test card, always declines", wait for renewal | "Payment problem" message with the Google Play link; PRO during the grace period |
+| S9 | RevenueCat → customer → Grant entitlement `pro`, Lifetime; restart the app | PRO active without tapping anything; Settings shows "Active" |

@@ -102,7 +102,10 @@ export class App {
     inject(PhotoLinks).install();
     effect(() => {
       const user = this.session.user();
-      if (user) void this.billing.init().catch(() => undefined);
+      if (user) {
+        void this.billing.init().catch(() => undefined);
+        void this.billing.checkOnStart();
+      }
       if (user?.onboarded && !user.consentRequired && !user.suspended) void this.push.start().catch(() => undefined);
       if (user?.onboarded) untracked(() => void this.notifications.refresh());
     });

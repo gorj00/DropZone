@@ -281,3 +281,33 @@ describe('BillingService.restore', () => {
     await session.clear();
   });
 });
+
+describe('BillingService.checkOnStart', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('asks the backend once per account and applies PRO granted outside the app', async () => {
+    const { billing, session, http } = await setup();
+    const check = billing.checkOnStart();
+    (await expect1(http, 'POST', '/billing/refresh')).flush(user({ pro: true, proProductId: 'rc_promo_pro_lifetime' }));
+    await check;
+    expect(session.subscribed()).toBe(true);
+
+    session.setUser(user());
+    await billing.checkOnStart();
+    http.expectNone(`${API_URL}/billing/refresh`);
+    await session.clear();
+  });
+
+  it('skips subscribers and ignores a failed check', async () => {
+    const { billing, session, http } = await setup({ user: { pro: true } });
+    await billing.checkOnStart();
+    http.expectNone(`${API_URL}/billing/refresh`);
+
+    session.setUser(user({ id: 'u2' }));
+    const check = billing.checkOnStart();
+    (await expect1(http, 'POST', '/billing/refresh')).flush({ code: 'INTERNAL', message: 'Down' }, { status: 500, statusText: 'Error' });
+    await check;
+    expect(session.subscribed()).toBe(false);
+    await session.clear();
+  });
+});
