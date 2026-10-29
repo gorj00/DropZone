@@ -28,7 +28,7 @@ gcloud run deploy $Service `
     --add-cloudsql-instances "${Project}:${Region}:saas-db" `
     --env-vars-file $EnvFile `
     --set-secrets $Secrets `
-    --min-instances 0 `
+    --min-instances 1 `
     --max-instances 2 `
     --concurrency 40 `
     --memory 1Gi `
