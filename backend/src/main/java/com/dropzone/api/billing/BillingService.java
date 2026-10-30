@@ -38,6 +38,7 @@ public class BillingService {
 	static final Duration REFRESH_AFTER_EXPIRY = Duration.ofDays(7);
 	static final Duration RECONCILE_BEFORE_EXPIRY = Duration.ofDays(1);
 	static final Duration RECONCILE_AFTER_EXPIRY = Duration.ofDays(3);
+	static final Duration HOLD_MAX = Duration.ofDays(60);
 	static final String PLAY_PACKAGE = "com.dropzone.app";
 	public static final String PAYWALL = "/paywall";
 
@@ -186,12 +187,14 @@ public class BillingService {
 
 	private void applyEntitlement(User user, RevenueCatClient.Entitlement e, Instant now, String eventType) {
 		boolean willRenew = e.present() && e.willRenew();
+		boolean hold = willRenew && e.billingIssueAt() != null && e.expiresAt() != null && now.isBefore(e.expiresAt().plus(HOLD_MAX));
 		if ("EXPIRATION".equals(eventType) && e.expiresAt() != null && !e.expiresAt().isAfter(now)) {
 			willRenew = false;
 		}
 		user.pro = e.present() && User.active(e.expiresAt(), willRenew, now);
 		user.proExpiresAt = e.present() ? e.expiresAt() : null;
 		user.willRenew = user.pro && willRenew;
+		user.billingHold = hold && !user.pro;
 		if (e.productId() != null) {
 			user.proProductId = e.productId();
 		}
@@ -213,6 +216,7 @@ public class BillingService {
 			if (product != null) {
 				user.proProductId = product;
 			}
+			user.billingHold = false;
 			if (RENEWING.contains(type)) {
 				user.willRenew = true;
 				user.billingIssueAt = null;
@@ -241,6 +245,7 @@ public class BillingService {
 				user.proExpiresAt = expires;
 				user.willRenew = false;
 				user.billingIssueAt = null;
+				user.billingHold = false;
 			}
 			default -> {
 			}
@@ -268,8 +273,15 @@ public class BillingService {
 		change.run();
 		if (wasPro && !user.pro && user.proEndedAt == null) {
 			user.proEndedAt = user.proExpiresAt != null && user.proExpiresAt.isBefore(now) ? user.proExpiresAt : now;
-			message(user, NotificationType.PRO_ENDED, PushType.PRO_ENDED, "Your PRO subscription ended",
-					"You're on Free now. Your PRO settings are saved and come back when you resubscribe.", Map.of("link", PAYWALL));
+			if (user.billingHold) {
+				message(user, NotificationType.BILLING_ISSUE, PushType.BILLING_ISSUE, "PRO is on hold",
+						"Google Play couldn't charge you, so PRO is paused. Fix your payment in Google Play and PRO comes back on its own.",
+						Map.of("link", playSubscriptionUrl(user.proProductId)));
+			}
+			else {
+				message(user, NotificationType.PRO_ENDED, PushType.PRO_ENDED, "Your PRO subscription ended",
+						"You're on Free now. Your PRO settings are saved and come back when you resubscribe.", Map.of("link", PAYWALL));
+			}
 		}
 		boolean subscribed = user.isSubscribed(now);
 		if (endedBefore && subscribed) {

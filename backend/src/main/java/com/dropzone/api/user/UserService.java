@@ -153,7 +153,8 @@ public class UserService {
 				user.timezone, user.isTrialActive(now) && !user.isSubscribed(now), user.trialEndsAt, user.weightUnit, user.lengthUnit,
 				isAdmin(user), user.bio, user.isTrialEndPending(now), consentRequired(user), user.isSuspended(),
 				user.willRenew && user.isSubscribed(now), user.proProductId, user.billingIssueAt != null, user.isProEndPending(now),
-				user.skipRestDays, user.hiddenFromSearch, user.hiddenFromLeaderboards, user.verifyRequestPushes, user.shareStats);
+				user.skipRestDays, user.hiddenFromSearch, user.hiddenFromLeaderboards, user.verifyRequestPushes, user.shareStats,
+				user.billingHold && !user.isSubscribed(now));
 	}
 
 	private static void setShareStats(User user, boolean share, Instant now) {

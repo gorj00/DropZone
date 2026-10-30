@@ -1,6 +1,6 @@
 import { Injectable, InjectionToken, inject, signal } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
-import { CustomerInfo, Purchases, PurchasesPackage, PurchasesPlugin, PurchasesStoreProduct } from '@revenuecat/purchases-capacitor';
+import { CustomerInfo, Purchases, PurchasesPackage, PurchasesPlugin, PurchasesStoreProduct, STORE_REPLACEMENT_MODE } from '@revenuecat/purchases-capacitor';
 import { environment } from '../../../environments/environment';
 import { ApiService } from '../api/api.service';
 import { User } from '../api/models';
@@ -10,7 +10,8 @@ import { SessionStore } from '../session.store';
 export type PlanId = 'pro_weekly' | 'pro_monthly' | 'pro_yearly';
 export type BillingPeriod = 'week' | 'month' | 'year';
 export type PriceState = 'loading' | 'ready' | 'failed';
-export type PurchaseResult = 'done' | 'pending' | 'cancelled';
+export type PurchaseResult = 'done' | 'scheduled' | 'pending' | 'cancelled';
+export type SwitchKind = 'now' | 'renewal';
 
 export interface Plan {
   id: PlanId;
@@ -54,6 +55,13 @@ export function planOf(productId: string | null | undefined): PlanId | null {
   if (exact) return exact.id;
   const text = productId.toLowerCase();
   return PLANS.find(p => text.includes(p.period))?.id ?? null;
+}
+
+export function switchKind(fromProductId: string | null | undefined, to: PlanId): SwitchKind | null {
+  const from = PLANS.findIndex(p => p.id === planOf(fromProductId));
+  const target = PLANS.findIndex(p => p.id === to);
+  if (from < 0 || from === target) return null;
+  return target > from ? 'now' : 'renewal';
 }
 
 export function planLabel(productId: string | null | undefined): string | null {
@@ -184,7 +192,9 @@ export class BillingService {
     if (!this.enabled || !plan?.pkg) throw new Error('Subscriptions are not available yet. Try again later.');
     const user = this.session.user();
     const current = subscribed(user) ? subscriptionId(user?.proProductId) : null;
-    const change = current && current !== subscriptionId(plan.pkg.product.identifier) ? { storeProductChangeInfo: { oldProductIdentifier: current } } : {};
+    const kind = current ? switchKind(user?.proProductId, id) : null;
+    const mode = kind === 'now' ? STORE_REPLACEMENT_MODE.CHARGE_FULL_PRICE : STORE_REPLACEMENT_MODE.DEFERRED;
+    const change = current && kind ? { storeProductChangeInfo: { oldProductIdentifier: current, replacementMode: mode } } : {};
     let info: CustomerInfo;
     try {
       info = (await this.bridge.sdk.purchasePackage({ aPackage: plan.pkg, ...change })).customerInfo;
@@ -208,6 +218,7 @@ export class BillingService {
     try {
       this.session.setUser(await this.api.refreshBilling());
     } catch { }
+    if (kind === 'renewal') return 'scheduled';
     if (subscribed(this.session.user())) return 'done';
     void this.sync();
     return hasPro(info) ? 'done' : 'pending';

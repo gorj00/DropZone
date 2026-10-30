@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, effect, inject, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { openExternal, playSubscriptionsUrl } from '../../core/config.service';
 import { SessionStore } from '../../core/session.store';
 import { ThemeService } from '../../core/theme.service';
 import { ToastService } from '../../core/toast.service';
@@ -14,11 +15,11 @@ import { Icon } from '../../ui/icon';
     <div class="screen pb-[calc(24px+env(safe-area-inset-bottom))]"
       style="background: radial-gradient(circle at 50% 14%, rgba(var(--gold-rgb), .18), transparent 40%), radial-gradient(130% 55% at 50% 0%, var(--bg-top) 0%, transparent 60%), var(--bg)">
       <div class="flex flex-col items-center pt-8 pad text-center">
-        <app-badge tone="gold" [size]="64" [icon]="copy.icon" />
+        <app-badge tone="gold" [size]="64" [icon]="copy().icon" />
         <div class="h text-[36px] [[data-theme=stealth]_&]:text-[38px] mt-4 leading-[.95]">
-          Your <span class="text-gold">PRO</span> {{ copy.title }}
+          Your <span class="text-gold">PRO</span> {{ copy().title }}
         </div>
-        <p class="text-[14px] text-mute mt-2.5 max-w-[300px]">{{ copy.text }}</p>
+        <p class="text-[14px] text-mute mt-2.5 max-w-[300px]">{{ copy().text }}</p>
       </div>
 
       <div class="mx-5 mt-5" [class]="theme.isNeon() ? 'tcard' : 'card-gold'" [style.border-color]="theme.isNeon() ? 'rgba(var(--gold-rgb),.45)' : null">
@@ -46,7 +47,11 @@ import { Icon } from '../../ui/icon';
       </div>
 
       <div class="mt-auto pad pt-5">
-        <button class="btn btn-gold" [disabled]="busy()" (click)="plans()"><app-icon name="crown" />See plans</button>
+        @if (hold()) {
+          <button class="btn btn-gold" [disabled]="busy()" (click)="fixPayment()"><app-icon name="coins" />Fix payment in Google Play</button>
+        } @else {
+          <button class="btn btn-gold" [disabled]="busy()" (click)="plans()"><app-icon name="crown" />See plans</button>
+        }
         <button class="btn btn-ghost mt-2.5" [disabled]="busy()" (click)="free()">Continue with Free</button>
       </div>
     </div>
@@ -69,15 +74,23 @@ export class TrialEndedPage {
   ];
 
   protected readonly pro = inject(ActivatedRoute).snapshot.data['kind'] === 'PRO';
-  protected readonly copy = this.pro
-    ? { icon: 'crown', title: 'subscription ended', text: 'Resubscribe to keep everything PRO, or carry on with the free plan.' }
-    : { icon: 'hourglass', title: 'trial has ended', text: 'Keep everything you used this week, or carry on with the free plan.' };
+  protected readonly hold = computed(() => this.pro && !!this.session.user()?.billingHold);
+  protected readonly copy = computed(() => {
+    if (this.hold()) return { icon: 'coins', title: 'is on hold', text: 'Google Play couldn’t charge you. Fix your payment in Google Play and PRO comes back on its own.' };
+    return this.pro
+      ? { icon: 'crown', title: 'subscription ended', text: 'Resubscribe to keep everything PRO, or carry on with the free plan.' }
+      : { icon: 'hourglass', title: 'trial has ended', text: 'Keep everything you used this week, or carry on with the free plan.' };
+  });
 
   constructor() {
     effect(() => {
       const u = this.session.user();
       if (!(this.pro ? u?.proEndPending : u?.trialEndPending)) untracked(() => void this.router.navigateByUrl('/today', { replaceUrl: true }));
     });
+  }
+
+  protected fixPayment(): void {
+    openExternal(playSubscriptionsUrl(this.session.user()?.proProductId));
   }
 
   protected plans(): void {

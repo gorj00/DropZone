@@ -88,10 +88,10 @@ export function dayLabel(d: Date): string {
         </div>
       }
 
-      @if (user()?.billingIssue) {
+      @if (user()?.billingIssue || user()?.billingHold) {
         <button class="mx-5 mt-3 w-[calc(100%-40px)] card-gold p-3.5 flex items-center gap-3 text-left" (click)="fixPayment()">
           <span class="qi bg-[rgba(var(--gold-rgb),.12)] text-gold"><app-icon name="coins" /></span>
-          <span class="flex-1 min-w-0 font-bold text-[14px] leading-snug">Payment problem — fix it in Google Play to keep PRO</span>
+          <span class="flex-1 min-w-0 font-bold text-[14px] leading-snug">{{ user()?.billingHold ? 'PRO is on hold — fix your payment in Google Play to get it back' : 'Payment problem — fix it in Google Play to keep PRO' }}</span>
           <span class="qbtn soft">Fix</span>
         </button>
       }

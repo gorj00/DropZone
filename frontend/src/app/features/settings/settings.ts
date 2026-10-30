@@ -118,10 +118,10 @@ type Flag = 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'verifyRequestPushes
 
         <div class="pad mt-4">
           <div class="lbl mb-2">Plan</div>
-          @if (u.billingIssue) {
+          @if (u.billingIssue || u.billingHold) {
             <button class="w-full card-gold p-3.5 mb-2.5 flex items-center gap-3 text-left" (click)="fixPayment()">
               <span class="qi bg-[rgba(var(--gold-rgb),.12)] text-gold"><app-icon name="coins" /></span>
-              <span class="flex-1 min-w-0 font-bold text-[14px] leading-snug">Payment problem — fix it in Google Play to keep PRO</span>
+              <span class="flex-1 min-w-0 font-bold text-[14px] leading-snug">{{ u.billingHold ? 'PRO is on hold — fix your payment in Google Play to get it back' : 'Payment problem — fix it in Google Play to keep PRO' }}</span>
               <span class="text-mute inline-flex"><app-icon name="chev" [size]="16" /></span>
             </button>
           }

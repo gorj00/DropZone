@@ -168,7 +168,7 @@ describe('PaywallPage', () => {
 
   it('shows a subscriber their plan, the Play link and a switch', async () => {
     const open = vi.spyOn(window, 'open').mockReturnValue(null);
-    const { text, button, el, settle, sdk, session } = await render({ user: { pro: true, proProductId: 'pro_monthly:m', willRenew: true } });
+    const { text, button, el, settle, sdk, session } = await render({ user: { pro: true, proProductId: 'pro_monthly:m', willRenew: true, proExpiresAt: '2026-11-20T12:00:00Z' } });
     expect(text()).toContain('You\'re PRO');
     expect(text()).toContain('YOUR PLAN');
     expect(button('Subscribe')).toBeUndefined();
@@ -178,10 +178,26 @@ describe('PaywallPage', () => {
 
     [...el.querySelectorAll('button')].find(b => b.textContent?.includes('Yearly'))!.click();
     await settle();
-    expect(text()).toContain('Google Play replaces your Monthly plan.');
+    expect(text()).toContain('Switches now. Google Play charges $59.99 today and adds your unused Monthly days on top.');
+    [...el.querySelectorAll('button')].find(b => b.textContent?.includes('Weekly'))!.click();
+    await settle();
+    expect(text()).toContain('Switches when your Monthly plan renews on Nov 20, 2026. You keep Monthly until then.');
+    [...el.querySelectorAll('button')].find(b => b.textContent?.includes('Yearly'))!.click();
+    await settle();
     button('Switch to Yearly')!.click();
-    await vi.waitFor(() => expect(sdk.purchasePackage).toHaveBeenCalledWith(expect.objectContaining({ storeProductChangeInfo: { oldProductIdentifier: 'pro_monthly' } })));
+    await vi.waitFor(() => expect(sdk.purchasePackage).toHaveBeenCalledWith(expect.objectContaining({ storeProductChangeInfo: { oldProductIdentifier: 'pro_monthly', replacementMode: 'CHARGE_FULL_PRICE' } })));
     open.mockRestore();
+    await session.clear();
+  });
+
+  it('tells a subscriber when a shorter plan starts and closes', async () => {
+    const { button, el, settle, http, session } = await render({ user: { pro: true, proProductId: 'pro_yearly:yearly', willRenew: true, proExpiresAt: '2027-03-01T12:00:00Z' } });
+    const toast = TestBed.inject(ToastService);
+    [...el.querySelectorAll('button')].find(b => b.textContent?.includes('Weekly'))!.click();
+    await settle();
+    button('Switch to Weekly')!.click();
+    (await vi.waitFor(() => http.expectOne(`${API_URL}/billing/refresh`))).flush(user({ pro: true, proProductId: 'pro_yearly:yearly', willRenew: true, proExpiresAt: '2027-03-01T12:00:00Z' }));
+    await vi.waitFor(() => expect(toast.message()?.text).toBe('Your plan switches to Weekly on Mar 1, 2027.'));
     await session.clear();
   });
 

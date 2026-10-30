@@ -76,6 +76,19 @@ describe('PRO-ended screen', () => {
     await session.clear();
   });
 
+  it('sends a subscriber on account hold to Google Play instead of the plans', async () => {
+    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+    const { session } = await setup({ proEndPending: true, billingHold: true, proProductId: 'pro_monthly:monthly' });
+    const harness = await RouterTestingHarness.create('/pro-ended');
+    const el = harness.routeNativeElement as HTMLElement;
+    expect(el.textContent).toContain('is on hold');
+    expect(el.textContent).not.toContain('See plans');
+    [...el.querySelectorAll('button')].find(b => b.textContent?.includes('Fix payment in Google Play'))!.click();
+    expect(open).toHaveBeenCalledWith('https://play.google.com/store/account/subscriptions?sku=pro_monthly&package=com.dropzone.app', '_blank');
+    open.mockRestore();
+    await session.clear();
+  });
+
   it('opens the plans', async () => {
     const { session, router } = await setup({ proEndPending: true });
     const harness = await RouterTestingHarness.create('/pro-ended');

@@ -90,6 +90,24 @@ describe('SettingsPage plan', () => {
     await session.clear();
   });
 
+  it('shows the account-hold banner with the Play link', async () => {
+    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+    const { button, session } = await render({ pro: false, billingHold: true, proProductId: 'pro_monthly:monthly' });
+    button('PRO is on hold — fix your payment in Google Play to get it back')!.click();
+    expect(open).toHaveBeenCalledWith('https://play.google.com/store/account/subscriptions?sku=pro_monthly&package=com.dropzone.app', '_blank');
+    open.mockRestore();
+    await session.clear();
+  });
+
+  it('shows a lifetime grant as active PRO without a renewal date', async () => {
+    const { text, session } = await render({ pro: true, proExpiresAt: null, willRenew: false, proProductId: 'rc_promo_pro_lifetime' });
+    expect(text()).toContain('DropZone PRO');
+    expect(text()).toContain('Active');
+    expect(text()).not.toContain('Renews');
+    expect(text()).not.toContain('Resubscribe');
+    await session.clear();
+  });
+
   it('tells a trial user without a purchase that no subscription was found', async () => {
     const { button, http, session } = await render({ pro: true, trial: true, trialEndsAt: new Date(Date.now() + 86_400_000).toISOString() });
     button('Restore purchases')!.click();

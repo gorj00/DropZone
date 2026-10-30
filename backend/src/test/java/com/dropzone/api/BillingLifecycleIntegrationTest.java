@@ -340,4 +340,55 @@ class BillingLifecycleIntegrationTest extends IntegrationTest {
 		assertThat(notifications(user, "BILLING_ISSUE")).isEqualTo(1);
 		revenueCat.unavailable(user.id());
 	}
+
+	@Test
+	void accountHoldPausesProAndComesBackWhenThePaymentIsFixed() throws Exception {
+		Session user = login("OnHold");
+		String token = withToken(user);
+		revenueCat.set(user.id(), new Entitlement(true, now().plus(20, ChronoUnit.DAYS), MONTHLY, true, null));
+		send("INITIAL_PURCHASE", user, now().minus(40, ChronoUnit.DAYS), now().plus(20, ChronoUnit.DAYS));
+		get(user, "/api/v1/me").andExpect(jsonPath("$.pro").value(true)).andExpect(jsonPath("$.billingHold").value(false));
+
+		revenueCat.set(user.id(), new Entitlement(true, now().minus(2, ChronoUnit.DAYS), MONTHLY, true, now().minus(9, ChronoUnit.DAYS)));
+		send("EXPIRATION", user, now().minus(1, ChronoUnit.MINUTES), now().minus(2, ChronoUnit.DAYS));
+		get(user, "/api/v1/me").andExpect(jsonPath("$.pro").value(false)).andExpect(jsonPath("$.billingHold").value(true))
+				.andExpect(jsonPath("$.billingIssue").value(false)).andExpect(jsonPath("$.proEndPending").value(true));
+		assertThat(notifications(user, "PRO_ENDED")).isZero();
+		assertThat(notifications(user, "BILLING_ISSUE")).isEqualTo(1);
+		assertThat(pushes.toToken(token)).singleElement().satisfies(push -> {
+			assertThat(push.type()).isEqualTo(PushType.BILLING_ISSUE);
+			assertThat(push.data()).containsEntry("link", "https://play.google.com/store/account/subscriptions?sku=dropzone_pro&package=com.dropzone.app");
+		});
+
+		revenueCat.set(user.id(), new Entitlement(true, now().plus(30, ChronoUnit.DAYS), MONTHLY, true, null));
+		send("RENEWAL", user, now(), now().plus(30, ChronoUnit.DAYS));
+		get(user, "/api/v1/me").andExpect(jsonPath("$.pro").value(true)).andExpect(jsonPath("$.billingHold").value(false))
+				.andExpect(jsonPath("$.proEndPending").value(false));
+		assertThat(notifications(user, "PRO_BACK")).isEqualTo(1);
+		revenueCat.unavailable(user.id());
+	}
+
+	@Test
+	void aHoldThatRanOutEndsLikeAnyExpiredSubscription() throws Exception {
+		Session user = login("HoldOver");
+		revenueCat.set(user.id(), new Entitlement(true, now().plus(20, ChronoUnit.DAYS), MONTHLY, true, null));
+		send("INITIAL_PURCHASE", user, now().minus(90, ChronoUnit.DAYS), now().plus(20, ChronoUnit.DAYS));
+		revenueCat.set(user.id(), new Entitlement(true, now().minus(61, ChronoUnit.DAYS), MONTHLY, true, now().minus(70, ChronoUnit.DAYS)));
+		send("EXPIRATION", user, now().minus(1, ChronoUnit.MINUTES), now().minus(61, ChronoUnit.DAYS));
+		get(user, "/api/v1/me").andExpect(jsonPath("$.pro").value(false)).andExpect(jsonPath("$.billingHold").value(false))
+				.andExpect(jsonPath("$.proEndPending").value(true));
+		assertThat(notifications(user, "PRO_ENDED")).isEqualTo(1);
+		revenueCat.unavailable(user.id());
+	}
+
+	@Test
+	void aLifetimeGrantIsProWithoutAnExpiry() throws Exception {
+		Session user = login("Lifetime");
+		revenueCat.set(user.id(), new Entitlement(true, null, "rc_promo_pro_lifetime", false, null));
+		post(user, "/api/v1/billing/refresh", null).andExpect(jsonPath("$.pro").value(true))
+				.andExpect(jsonPath("$.proExpiresAt").doesNotExist()).andExpect(jsonPath("$.billingHold").value(false))
+				.andExpect(jsonPath("$.proEndPending").value(false)).andExpect(jsonPath("$.trial").value(false));
+		assertThat(notifications(user, "PRO_ENDED")).isZero();
+		revenueCat.unavailable(user.id());
+	}
 }

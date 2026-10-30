@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
 import { QuestType } from '../../core/api/models';
 import { ConfigService, openExternal, playSubscriptionsUrl } from '../../core/config.service';
-import { BillingService, PlanId, planLabel, planOf } from '../../core/native/billing';
+import { BillingService, PlanId, planLabel, planOf, switchKind } from '../../core/native/billing';
 import { LockService } from '../../core/native/lock';
 import { SessionStore } from '../../core/session.store';
 import { CatalogStore } from '../../core/stores';
@@ -127,7 +127,7 @@ export function mealRow(catalog: QuestType[], path: string): Row {
               <p><span class="text-ink font-semibold">{{ p.price }} per {{ p.period }}.</span> Renews automatically until you cancel.</p>
               <p>Billed to your Google Play account.</p>
               <p>Cancel anytime in Google Play › Payments &amp; subscriptions; PRO stays until the end of the paid period.</p>
-              @if (switching()) { <p>Google Play replaces your {{ currentLabel() }} plan.</p> }
+              @if (switchNote(); as note) { <p data-test="switch-note">{{ note }}</p> }
             </div>
           }
         }
@@ -189,6 +189,19 @@ export class PaywallPage {
   protected readonly plan = computed(() => this.billing.plans().find(p => p.id === this.selected()) ?? null);
   protected readonly switching = computed(() => !!this.current() && !!this.plan() && this.plan()!.id !== this.current());
   protected readonly buyable = computed(() => !this.subscribed() || this.switching());
+  protected readonly renewDate = computed(() => {
+    const at = this.session.user()?.proExpiresAt;
+    return at ? new Date(at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
+  });
+  protected readonly switchNote = computed(() => {
+    const p = this.plan();
+    if (!p || !this.switching()) return null;
+    if (switchKind(this.session.user()?.proProductId, p.id) === 'now') {
+      return `Switches now. Google Play charges ${p.price} today and adds your unused ${this.currentLabel()} days on top.`;
+    }
+    const when = this.renewDate();
+    return `Switches when your ${this.currentLabel()} plan renews${when ? ` on ${when}` : ''}. You keep ${this.currentLabel()} until then.`;
+  });
   protected readonly selectedBg = computed(() => this.theme.isNeon()
     ? 'linear-gradient(180deg,#2a2240,#1a1440)'
     : 'linear-gradient(#211b0c,#15130c)');
@@ -226,7 +239,11 @@ export class PaywallPage {
     this.busy.set(true);
     try {
       const result = await this.billing.purchase(this.selected());
-      if (result === 'done') {
+      if (result === 'scheduled') {
+        const when = this.renewDate();
+        this.toast.show(`Your plan switches to ${this.plan()!.label}${when ? ` on ${when}` : ' at your next renewal'}.`);
+        this.close();
+      } else if (result === 'done') {
         this.toast.show(switching ? 'Plan changed. Google Play has the details.' : 'Welcome to PRO. Every quest is yours.');
         this.close();
       } else if (result === 'pending') {

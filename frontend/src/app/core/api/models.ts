@@ -57,6 +57,7 @@ export interface User {
   willRenew?: boolean;
   proProductId?: string | null;
   billingIssue?: boolean;
+  billingHold?: boolean;
   proEndPending?: boolean;
   skipRestDays?: boolean;
   hiddenFromSearch?: boolean;

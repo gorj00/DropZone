@@ -67,6 +67,8 @@ public class User {
 
 	public Instant billingIssueAt;
 
+	public boolean billingHold;
+
 	public Instant billingEventAt;
 
 	public Instant proEndedAt;

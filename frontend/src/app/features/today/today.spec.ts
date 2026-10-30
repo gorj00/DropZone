@@ -187,4 +187,26 @@ describe('TodayPage billing banner', () => {
     expect(open).toHaveBeenCalledWith('https://play.google.com/store/account/subscriptions?sku=pro_monthly&package=com.dropzone.app', '_blank');
     open.mockRestore();
   });
+
+  it('links an account hold to the Play subscription page', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        { provide: ApiService, useValue: { slipUps: vi.fn().mockResolvedValue([]), unreadNotifications: vi.fn().mockResolvedValue({ count: 0 }) } },
+        { provide: LockService, useValue: { native: false, status: signal(null), disable: vi.fn().mockResolvedValue(undefined) } },
+        { provide: TodayStore, useValue: { today: signal(null), left: signal(0), load: vi.fn().mockRejectedValue(new Error('offline')) } },
+        { provide: GoalStore, useValue: { goal: signal(null), active: signal(null), load: vi.fn().mockResolvedValue(null) } },
+        { provide: ProofService, useValue: { syncAuto: vi.fn(), isPending: () => false } }
+      ]
+    });
+    TestBed.inject(SessionStore).user.set({ id: 'u1', pro: false, billingHold: true, proProductId: 'pro_monthly:monthly', lockedApps: [] } as unknown as User);
+    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+    const fixture = TestBed.createComponent(TodayPage);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const banner = [...(fixture.nativeElement as HTMLElement).querySelectorAll('button')].find(b => b.textContent?.includes('PRO is on hold — fix your payment in Google Play to get it back'));
+    banner!.click();
+    expect(open).toHaveBeenCalledWith('https://play.google.com/store/account/subscriptions?sku=pro_monthly&package=com.dropzone.app', '_blank');
+    open.mockRestore();
+  });
 });

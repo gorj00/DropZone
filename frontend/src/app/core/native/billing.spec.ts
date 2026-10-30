@@ -7,7 +7,7 @@ import { API_URL } from '../api/api.service';
 import { User } from '../api/models';
 import { authInterceptor } from '../auth';
 import { SessionStore } from '../session.store';
-import { BillingService, OTHER_ACCOUNT_MESSAGE, PURCHASES, PURCHASE_SYNC_DELAYS_MS, perMonth, planLabel, planOf, toPlans } from './billing';
+import { BillingService, OTHER_ACCOUNT_MESSAGE, PURCHASES, PURCHASE_SYNC_DELAYS_MS, perMonth, planLabel, planOf, switchKind, toPlans } from './billing';
 import { LockService } from './lock';
 
 const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -226,17 +226,39 @@ describe('BillingService.purchase', () => {
     await session.clear();
   });
 
-  it('replaces the current subscription when a subscriber switches plan', async () => {
+  it('switches to a longer plan right away with the full price charged', async () => {
     const { billing, sdk, session, http } = await setup({ user: { pro: true, proProductId: 'pro_monthly:monthly', willRenew: true } });
     await billing.init();
     const result = billing.purchase('pro_yearly');
     (await expect1(http, 'POST', '/billing/refresh')).flush(user({ pro: true, proProductId: 'pro_yearly:yearly' }));
-    await result;
+    expect(await result).toBe('done');
     expect(sdk.purchasePackage).toHaveBeenCalledWith(expect.objectContaining({
       aPackage: PACKAGES[2],
-      storeProductChangeInfo: { oldProductIdentifier: 'pro_monthly' }
+      storeProductChangeInfo: { oldProductIdentifier: 'pro_monthly', replacementMode: 'CHARGE_FULL_PRICE' }
     }));
     await session.clear();
+  });
+
+  it('schedules a shorter plan for the next renewal', async () => {
+    const { billing, sdk, session, http } = await setup({ user: { pro: true, proProductId: 'pro_yearly:yearly', willRenew: true } });
+    await billing.init();
+    const result = billing.purchase('pro_weekly');
+    (await expect1(http, 'POST', '/billing/refresh')).flush(user({ pro: true, proProductId: 'pro_yearly:yearly', willRenew: true }));
+    expect(await result).toBe('scheduled');
+    expect(sdk.purchasePackage).toHaveBeenCalledWith(expect.objectContaining({
+      aPackage: PACKAGES[0],
+      storeProductChangeInfo: { oldProductIdentifier: 'pro_yearly', replacementMode: 'DEFERRED' }
+    }));
+    await session.clear();
+  });
+
+  it('orders plans weekly < monthly < yearly for switches', () => {
+    expect(switchKind('pro_weekly:weekly', 'pro_monthly')).toBe('now');
+    expect(switchKind('pro_monthly:monthly', 'pro_yearly')).toBe('now');
+    expect(switchKind('pro_yearly:yearly', 'pro_monthly')).toBe('renewal');
+    expect(switchKind('pro_monthly:monthly', 'pro_weekly')).toBe('renewal');
+    expect(switchKind('pro_monthly:monthly', 'pro_monthly')).toBeNull();
+    expect(switchKind(null, 'pro_monthly')).toBeNull();
   });
 
   it('buys without a change for a trial user', async () => {
