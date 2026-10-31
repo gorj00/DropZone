@@ -11,7 +11,7 @@ $config = Get-Content $Toml -Raw
 if ($config -match 'REPLACE_WITH_KV_ID') {
     $out = npx wrangler kv namespace create dropzone-watchdog-state | Out-String
     if ($out -notmatch '"?id"?\s*[=:]\s*"([0-9a-f]{32})"') { throw "Could not read the KV namespace id:`n$out" }
-    [IO.File]::WriteAllText($Toml, $config -replace 'REPLACE_WITH_KV_ID', $Matches[1])
+    [IO.File]::WriteAllText($Toml, ($config -replace 'REPLACE_WITH_KV_ID', $Matches[1]))
 }
 
 npx wrangler deploy
