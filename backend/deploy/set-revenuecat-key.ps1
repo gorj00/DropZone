@@ -19,7 +19,7 @@ if ($LASTEXITCODE -eq 0) {
     gcloud secrets versions add $Secret --project $Project --data-file $file.FullName
 }
 else {
-    gcloud secrets create $Secret --project $Project --replication-policy automatic --data-file $file.FullName
+    gcloud secrets create $Secret --project $Project --replication-policy automatic --labels "app=dropzone,env=$Env" --data-file $file.FullName
 }
 Remove-Item $file.FullName
 

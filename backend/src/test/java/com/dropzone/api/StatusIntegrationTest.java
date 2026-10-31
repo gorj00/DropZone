@@ -26,7 +26,9 @@ class StatusIntegrationTest extends IntegrationTest {
 				.andExpect(jsonPath("$.failedJobs.length()").value(1))
 				.andExpect(jsonPath("$.failedJobs[0].job").value("daily-reminders"))
 				.andExpect(jsonPath("$.failedJobs[0].error").value("IllegalStateException: boom"))
-				.andExpect(jsonPath("$.errorsLast5Minutes").isNumber());
+				.andExpect(jsonPath("$.errorsLast5Minutes").isNumber())
+				.andExpect(jsonPath("$.busyLast5Minutes").value(0))
+				.andExpect(jsonPath("$.databaseWaitsLast5Minutes").isNumber());
 
 		runJob("daily-reminders");
 		mvc.perform(MockMvcRequestBuilders.get("/internal/status").header("Authorization", "Bearer " + STATUS_TOKEN)).andExpect(status().isOk())

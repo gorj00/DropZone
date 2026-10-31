@@ -1,5 +1,7 @@
 const ERROR_LIMIT = 10;
 const ERROR_ALERT_EVERY_MS = 60 * 60 * 1000;
+const DATABASE_WAIT_LIMIT = 10;
+const CAPACITY_ALERT_EVERY_MS = 24 * 60 * 60 * 1000;
 const RETRY_MS = 20_000;
 
 export async function watch(env, { fetch, send, sleep, now = () => new Date() }) {
@@ -42,6 +44,17 @@ export async function watch(env, { fetch, send, sleep, now = () => new Date() })
   if (errors > ERROR_LIMIT && (!lastErrorAlert || now() - new Date(lastErrorAlert) >= ERROR_ALERT_EVERY_MS)) {
     await send('DropZone server errors', `${errors} server errors in the last 5 minutes. Details are in the Cloud Run logs.`);
     await env.STATE.put('errors', now().toISOString());
+  }
+
+  const busy = status.body.busyLast5Minutes ?? 0;
+  const waits = status.body.databaseWaitsLast5Minutes ?? 0;
+  const lastCapacityAlert = await env.STATE.get('capacity');
+  if ((busy > 0 || waits > DATABASE_WAIT_LIMIT) && (!lastCapacityAlert || now() - new Date(lastCapacityAlert) >= CAPACITY_ALERT_EVERY_MS)) {
+    await send('DropZone needs more capacity', [
+      `In the last 5 minutes ${busy} requests arrived while a server was nearly full and ${waits} requests waited for a database connection.`,
+      'Raise --max-instances in backend/deploy/deploy-prod.ps1 or DB_POOL_SIZE in backend/deploy/prod.env.yaml, keeping all apps on saas-db under its connection limit.'
+    ].join('\n'));
+    await env.STATE.put('capacity', now().toISOString());
   }
 }
 

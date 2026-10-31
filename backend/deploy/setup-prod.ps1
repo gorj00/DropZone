@@ -23,7 +23,7 @@ function NewSecret([string] $name, [string] $value) {
     if (Exists { gcloud secrets describe $name --project $Project }) { Write-Host "secret $name exists"; return }
     $file = New-TemporaryFile
     [IO.File]::WriteAllText($file.FullName, $value)
-    gcloud secrets create $name --project $Project --replication-policy automatic --data-file $file.FullName
+    gcloud secrets create $name --project $Project --replication-policy automatic --labels app=dropzone,env=prod --data-file $file.FullName
     Remove-Item $file.FullName
 }
 
@@ -50,6 +50,9 @@ NewSecret 'prod-dropzone-unsplash-access-key' (gcloud secrets versions access la
 
 if (-not (Exists { gcloud storage buckets describe "gs://$Bucket" --project $Project })) {
     gcloud storage buckets create "gs://$Bucket" --project $Project --location $Region --uniform-bucket-level-access --public-access-prevention --soft-delete-duration 0
+}
+if (Exists { gcloud storage buckets describe "gs://$Bucket" --project $Project }) {
+    gcloud storage buckets update "gs://$Bucket" --project $Project --update-labels app=dropzone,env=prod --format none
 }
 
 gcloud projects add-iam-policy-binding $Project --member "serviceAccount:$Runtime" --role roles/cloudsql.client --format none
@@ -82,8 +85,12 @@ foreach ($name in $jobs.Keys) {
         --uri "$JobsUrl/$name" --http-method POST --oidc-service-account-email $Scheduler --oidc-token-audience $JobsUrl --attempt-deadline 300s --quiet
 }
 
-if (-not (Exists { gcloud beta run domain-mappings describe --domain api.dropzone.mobi --region $Region --project $Project })) {
-    gcloud beta run domain-mappings create --service dropzone-api --domain api.dropzone.mobi --region $Region --project $Project
+$Mappings = "https://$Region-run.googleapis.com/apis/domains.cloudrun.com/v1/namespaces/$Project/domainmappings"
+$Auth = @{ Authorization = "Bearer $(gcloud auth print-access-token)" }
+try { Invoke-RestMethod "$Mappings/api.dropzone.mobi" -Headers $Auth | Out-Null }
+catch {
+    $mapping = @{ apiVersion = 'domains.cloudrun.com/v1'; kind = 'DomainMapping'; metadata = @{ name = 'api.dropzone.mobi'; namespace = $Project }; spec = @{ routeName = 'dropzone-api' } }
+    Invoke-RestMethod -Method Post $Mappings -Headers $Auth -ContentType 'application/json' -Body ($mapping | ConvertTo-Json -Depth 4) | Out-Null
 }
 
 Write-Host 'Production is set up: https://api.dropzone.mobi (DNS: CNAME api -> ghs.googlehosted.com, DNS only in Cloudflare)'

@@ -9,10 +9,10 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
 
-class ServerErrorsTest {
+public class ServerErrorsTest {
 
-	static class MovingClock extends Clock {
-		Instant now = Instant.parse("2026-10-30T12:00:00Z");
+	public static class MovingClock extends Clock {
+		public Instant now = Instant.parse("2026-10-30T12:00:00Z");
 
 		@Override
 		public ZoneId getZone() {

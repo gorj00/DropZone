@@ -39,5 +39,6 @@ gcloud run deploy $Service `
     --memory 1Gi `
     --cpu-boost `
     --allow-unauthenticated `
+    --labels app=dropzone,env=prod `
     --quiet
 if ($LASTEXITCODE -ne 0) { throw 'gcloud run deploy failed' }

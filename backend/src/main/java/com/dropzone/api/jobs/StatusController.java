@@ -3,6 +3,7 @@ package com.dropzone.api.jobs;
 import com.dropzone.api.common.ApiException;
 import com.dropzone.api.common.ServerErrors;
 import com.dropzone.api.config.AppProperties;
+import com.dropzone.api.config.CapacityFilter;
 import com.dropzone.api.domain.JobRunRepository;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -20,11 +21,13 @@ public class StatusController {
 	private final AppProperties props;
 	private final JobRunRepository runs;
 	private final ServerErrors errors;
+	private final CapacityFilter capacity;
 
-	public StatusController(AppProperties props, JobRunRepository runs, ServerErrors errors) {
+	public StatusController(AppProperties props, JobRunRepository runs, ServerErrors errors, CapacityFilter capacity) {
 		this.props = props;
 		this.runs = runs;
 		this.errors = errors;
+		this.capacity = capacity;
 	}
 
 	@GetMapping(PATH)
@@ -38,10 +41,10 @@ public class StatusController {
 			throw ApiException.unauthorized("Invalid status token");
 		}
 		List<FailedJob> failed = runs.findByFailedAtNotNullOrderByName().stream().map(r -> new FailedJob(r.name, r.failedAt, r.error)).toList();
-		return new Status(failed, errors.lastWindow());
+		return new Status(failed, errors.lastWindow(), capacity.busyLastWindow(), capacity.databaseWaitsLastWindow());
 	}
 
-	public record Status(List<FailedJob> failedJobs, int errorsLast5Minutes) {
+	public record Status(List<FailedJob> failedJobs, int errorsLast5Minutes, int busyLast5Minutes, int databaseWaitsLast5Minutes) {
 	}
 
 	public record FailedJob(String job, Instant failedAt, String error) {

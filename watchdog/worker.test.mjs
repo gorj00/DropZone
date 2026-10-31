@@ -87,6 +87,26 @@ test('emails about server errors at most once an hour', async () => {
   assert.equal(sent.length, 2);
 });
 
+test('emails about missing capacity at most once a day', async () => {
+  const { run, sent, server, later } = setup();
+  server.body.databaseWaitsLast5Minutes = 10;
+  await run();
+  assert.equal(sent.length, 0);
+
+  server.body.busyLast5Minutes = 1;
+  await run();
+  later(23 * 60 * 60 * 1000);
+  await run();
+  assert.deepEqual(sent.map(s => s.subject), ['DropZone needs more capacity']);
+  assert.match(sent[0].text, /1 requests arrived/);
+
+  server.body.busyLast5Minutes = 0;
+  server.body.databaseWaitsLast5Minutes = 11;
+  later(60 * 60 * 1000);
+  await run();
+  assert.equal(sent.length, 2);
+});
+
 test('says once when the status check itself fails', async () => {
   const { run, sent, server } = setup();
   server.status = 401;
