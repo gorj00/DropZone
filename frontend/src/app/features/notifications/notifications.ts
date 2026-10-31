@@ -19,6 +19,7 @@ const PAGE = 30;
 
 const META: Record<NotificationType, { icon: string; tone: string }> = {
   COMMENT: { icon: 'comment', tone: 'var(--accent-2)' },
+  COMMENT_REPLY: { icon: 'comment', tone: 'var(--accent-2)' },
   COMMENT_LIKE: { icon: 'heart', tone: 'var(--accent)' },
   HYPE: { icon: 'bolt', tone: 'var(--accent)' },
   VERIFY: { icon: 'check', tone: 'var(--ok)' },
@@ -31,17 +32,19 @@ const META: Record<NotificationType, { icon: string; tone: string }> = {
   TRIAL_ENDED: { icon: 'hourglass', tone: 'var(--gold)' },
   BILLING_ISSUE: { icon: 'coins', tone: 'var(--accent)' },
   PRO_ENDED: { icon: 'crown', tone: 'var(--mute)' },
-  PRO_BACK: { icon: 'crown', tone: 'var(--gold)' }
+  PRO_BACK: { icon: 'crown', tone: 'var(--gold)' },
+  LIFETIME_PRO: { icon: 'crown', tone: 'var(--gold)' }
 };
 
 const TITLES: Partial<Record<NotificationType, string>> = {
   TRIAL_ENDED: 'Your PRO trial has ended',
   BILLING_ISSUE: 'Payment problem — fix it in Google Play to keep PRO',
   PRO_ENDED: 'Your PRO subscription ended',
-  PRO_BACK: 'Welcome back to PRO'
+  PRO_BACK: 'Welcome back to PRO',
+  LIFETIME_PRO: 'You’ve got PRO for life!'
 };
 
-const NO_QUOTE: NotificationType[] = ['TRIAL_ENDING', 'PROOF_REJECTED', 'ADMIN_REPORT', 'TRIAL_ENDED', 'BILLING_ISSUE', 'PRO_ENDED', 'PRO_BACK'];
+const NO_QUOTE: NotificationType[] = ['TRIAL_ENDING', 'PROOF_REJECTED', 'ADMIN_REPORT', 'TRIAL_ENDED', 'BILLING_ISSUE', 'PRO_ENDED', 'PRO_BACK', 'LIFETIME_PRO'];
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -123,6 +126,7 @@ export class NotificationsPage implements OnInit {
   protected verb(n: AppNotification): string {
     switch (n.type) {
       case 'COMMENT': return ' commented on your post';
+      case 'COMMENT_REPLY': return ' replied to your comment';
       case 'COMMENT_LIKE': return ' liked your comment';
       case 'HYPE': return ' hyped your post';
       case 'VERIFY': return ' verified your proof';

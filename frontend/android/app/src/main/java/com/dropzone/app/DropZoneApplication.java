@@ -60,6 +60,7 @@ public class DropZoneApplication extends Application {
         manager.createNotificationChannels(Arrays.asList(
             new NotificationChannel("reminders", getString(R.string.channel_reminders), NotificationManager.IMPORTANCE_DEFAULT),
             new NotificationChannel("community", getString(R.string.channel_community), NotificationManager.IMPORTANCE_DEFAULT),
+            new NotificationChannel("community-quiet", getString(R.string.channel_community_quiet), NotificationManager.IMPORTANCE_LOW),
             new NotificationChannel("account", getString(R.string.channel_account), NotificationManager.IMPORTANCE_DEFAULT)
         ));
     }

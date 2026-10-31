@@ -10,6 +10,8 @@ FROM eclipse-temurin:21-jre@sha256:ff92a063dac03a29fca3987bcfc66aa5f17769542df80
 WORKDIR /app
 RUN useradd --system --uid 1001 dropzone
 COPY --from=build /app/build/libs/*.jar app.jar
+ARG GIT_SHA=unknown
+ENV GIT_SHA=$GIT_SHA
 USER dropzone
 EXPOSE 8080
 ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "/app/app.jar"]

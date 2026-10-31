@@ -1,0 +1,21 @@
+name = "dropzone-watchdog"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+workers_dev = false
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[vars]
+HEALTH_URL = "https://api.dropzone.mobi/actuator/health"
+STATUS_URL = "https://api.dropzone.mobi/internal/status"
+FROM = "watchdog@alerts.dropzone.mobi"
+TO = "os.jangorol@gmail.com"
+
+[[send_email]]
+name = "ALERT"
+destination_address = "os.jangorol@gmail.com"
+
+[[kv_namespaces]]
+binding = "STATE"
+id = "REPLACE_WITH_KV_ID"

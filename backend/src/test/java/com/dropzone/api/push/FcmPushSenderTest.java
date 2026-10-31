@@ -31,5 +31,7 @@ class FcmPushSenderTest {
 			assertThat(type.channel()).isEqualTo("account");
 		}
 		assertThat(FcmPushSender.message("token", PushType.PRO_ENDED, "t", "b", Map.of("type", "PRO_ENDED"))).isNotNull();
+		assertThat(FcmPushSender.message("token", PushType.COMMENT, "t", "b", Map.of(PushService.TAG, "comments-1", PushService.QUIET, "1")))
+				.isNotNull();
 	}
 }

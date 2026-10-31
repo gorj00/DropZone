@@ -20,6 +20,8 @@ public class Comment {
 	@Column(nullable = false)
 	public UUID userId;
 
+	public UUID parentId;
+
 	@Column(nullable = false)
 	public String body;
 

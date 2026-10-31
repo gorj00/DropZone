@@ -26,6 +26,12 @@ public class GlobalExceptionHandler {
 
 	private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+	private final ServerErrors errors;
+
+	public GlobalExceptionHandler(ServerErrors errors) {
+		this.errors = errors;
+	}
+
 	@ExceptionHandler(ApiException.class)
 	ResponseEntity<ErrorResponse> api(ApiException e) {
 		return build(e.status(), e.code(), e.getMessage());
@@ -87,6 +93,7 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(Exception.class)
 	ResponseEntity<ErrorResponse> unexpected(Exception e) {
+		errors.record();
 		log.error("Unexpected error", e);
 		return build(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL", "Unexpected error");
 	}

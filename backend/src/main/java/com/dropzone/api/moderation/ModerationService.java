@@ -292,6 +292,7 @@ public class ModerationService {
 			}
 			case COMMENT -> {
 				Comment comment = comments.findById(targetId).orElseThrow(() -> ApiException.notFound("Comment not found"));
+				reports.deleteReplyReportsOf(comment.id);
 				comments.delete(comment);
 				strike(comment.userId);
 			}

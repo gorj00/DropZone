@@ -15,8 +15,8 @@ export type FeedScope = 'FRIENDS' | 'EVERYONE' | 'TO_VERIFY';
 export type FeedType = 'QUEST_PROOF' | 'CHECKPOINT_PROOF' | 'CHECKPOINT_CLEARED' | 'TRANSFORMATION';
 export type TransformationLayout = 'SPLIT' | 'SLIDESHOW';
 export type PostVisibility = 'PRIVATE' | 'FRIENDS' | 'EVERYONE';
-export type NotificationType = 'COMMENT' | 'COMMENT_LIKE' | 'HYPE' | 'VERIFY' | 'PROOF_VERIFIED' | 'FRIEND_REQUEST' | 'FRIEND_ACCEPTED' | 'TRIAL_ENDING' | 'PROOF_REJECTED' | 'ADMIN_REPORT'
-  | 'TRIAL_ENDED' | 'BILLING_ISSUE' | 'PRO_ENDED' | 'PRO_BACK';
+export type NotificationType = 'COMMENT' | 'COMMENT_REPLY' | 'COMMENT_LIKE' | 'HYPE' | 'VERIFY' | 'PROOF_VERIFIED' | 'FRIEND_REQUEST' | 'FRIEND_ACCEPTED' | 'TRIAL_ENDING' | 'PROOF_REJECTED' | 'ADMIN_REPORT'
+  | 'TRIAL_ENDED' | 'BILLING_ISSUE' | 'PRO_ENDED' | 'PRO_BACK' | 'LIFETIME_PRO';
 export type ReportTarget = 'POST' | 'COMMENT' | 'USER';
 export type ProofStatus = 'PENDING' | 'VERIFIED' | 'REJECTED' | 'WITHDRAWN';
 export type HiddenReason = 'FRIENDS_ONLY' | 'UNDER_REVIEW' | 'REMOVED';
@@ -58,11 +58,14 @@ export interface User {
   proProductId?: string | null;
   billingIssue?: boolean;
   billingHold?: boolean;
+  pendingPlanId?: string | null;
+  pendingPlanAt?: string | null;
   proEndPending?: boolean;
   skipRestDays?: boolean;
   hiddenFromSearch?: boolean;
   hiddenFromLeaderboards?: boolean;
   verifyRequestPushes?: boolean;
+  commentPushes?: boolean;
   shareStats?: boolean;
 }
 
@@ -308,6 +311,7 @@ export interface FeedComment {
   likeCount: number;
   likedByMe: boolean;
   canDelete: boolean;
+  parentId?: string | null;
 }
 
 export interface DailyLog {
@@ -498,6 +502,12 @@ export interface SlipUp {
 
 export type Relation = 'SELF' | 'FRIEND' | 'REQUESTED' | 'INCOMING' | 'NONE';
 
+export interface UserProfile {
+  user: UserSummary;
+  relation: Relation;
+  requestId: string | null;
+}
+
 export interface ProofView {
   id: string;
   kind: 'QUEST' | 'CHECKPOINT';
@@ -583,7 +593,7 @@ export interface CustomQuestRequest {
   checkAudience?: CheckAudience;
 }
 
-export type UserPatch = Partial<Pick<User, 'displayName' | 'handle' | 'theme' | 'unlockMode' | 'minutesPerQuest' | 'publicByDefault' | 'defaultVerification' | 'slipUpTracking' | 'timezone' | 'weightUnit' | 'lengthUnit' | 'bio' | 'skipRestDays' | 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'verifyRequestPushes' | 'shareStats'>> & { avatarUrl?: string; trialEndAcknowledged?: boolean; proEndAcknowledged?: boolean; region?: { source: string; value: string; eu: boolean } };
+export type UserPatch = Partial<Pick<User, 'displayName' | 'handle' | 'theme' | 'unlockMode' | 'minutesPerQuest' | 'publicByDefault' | 'defaultVerification' | 'slipUpTracking' | 'timezone' | 'weightUnit' | 'lengthUnit' | 'bio' | 'skipRestDays' | 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'verifyRequestPushes' | 'commentPushes' | 'shareStats'>> & { avatarUrl?: string; trialEndAcknowledged?: boolean; proEndAcknowledged?: boolean; region?: { source: string; value: string; eu: boolean } };
 
 export type CheckpointPatch = Partial<Pick<Checkpoint, 'rewardTitle' | 'rewardImageUrl' | 'rewardImageCredit' | 'isPublic' | 'visibility' | 'verification' | 'deadline' | 'targetValue'>>;
 

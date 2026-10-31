@@ -31,7 +31,7 @@ import { GoalKind, QuestSchedule, daysLabel, goalKindOf, goalOf, goalText } from
 import { DeleteAccountSheet } from './delete-account';
 
 type Section = 'apps' | 'unlock' | 'quests' | 'verify' | 'blocked';
-type Flag = 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'verifyRequestPushes' | 'shareStats';
+type Flag = 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'verifyRequestPushes' | 'commentPushes' | 'shareStats';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -56,7 +56,7 @@ type Flag = 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'verifyRequestPushes
               <button class="btn btn-ghost btn-sm !w-auto !px-3" [disabled]="avatar.busy()" (click)="avatar.change()">{{ avatar.busy() ? 'Saving…' : 'Change' }}</button>
             </div>
           }
-          <app-profile-form [(name)]="profileName" [(handle)]="profileHandle" [(bio)]="profileBio" />
+          <app-profile-form [(name)]="profileName" [(handle)]="profileHandle" [(bio)]="profileBio" [savedHandle]="user()?.handle" />
           <button class="btn btn-primary btn-sm mt-4" [disabled]="busy() || !profileDirty() || !profileForm()?.valid()" (click)="saveProfile()">Save profile</button>
         </div>
       </div>
@@ -336,6 +336,7 @@ type Flag = 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'verifyRequestPushes
               </button>
             }
             <ng-container *ngTemplateOutlet="switchRow; context: { key: 'verifyRequestPushes', on: u.verifyRequestPushes !== false, title: 'Verify requests', text: 'A push when friends need your verify, at most one every 3 hours' }" />
+            <ng-container *ngTemplateOutlet="switchRow; context: { key: 'commentPushes', on: u.commentPushes !== false, title: 'Comments', text: 'Comments and replies on your posts, grouped per post. At most one alert per post an hour' }" />
           </div>
         </div>
 
@@ -513,6 +514,8 @@ export class SettingsPage {
     if (!u?.pro) return '3 basic quests · Instagram lock';
     if (u.trial && u.trialEndsAt) return `Ends ${trialEnd(u.trialEndsAt, false)} · ${trialLeft(u.trialEndsAt) ?? 'ending'}`;
     if (!u.proExpiresAt) return 'Active';
+    const next = planLabel(u.pendingPlanId);
+    if (next && u.pendingPlanAt) return `Switches to ${next} on ${new Date(u.pendingPlanAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
     const date = new Date(u.proExpiresAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     return u.willRenew ? `Renews ${date}` : `Ends ${date} · Resubscribe`;
   });
@@ -618,12 +621,7 @@ export class SettingsPage {
   }
 
   protected plan(): void {
-    const u = this.user();
-    if (!u?.pro || u.trial) {
-      this.paywall();
-      return;
-    }
-    openExternal(playSubscriptionsUrl(u.proProductId));
+    this.paywall();
   }
 
   protected fixPayment(): void {
@@ -691,7 +689,7 @@ export class SettingsPage {
   protected async toggleFlag(key: Flag): Promise<void> {
     const u = this.user();
     if (!u || this.busy()) return;
-    const on = key === 'verifyRequestPushes' ? u.verifyRequestPushes !== false : !!u[key];
+    const on = key === 'verifyRequestPushes' || key === 'commentPushes' ? u[key] !== false : !!u[key];
     this.busy.set(true);
     try {
       await this.session.update(key === 'shareStats' ? { shareStats: !on, region: this.region.region() } : { [key]: !on });

@@ -86,29 +86,52 @@ export function angle(a: { x: number; y: number }, b: { x: number; y: number }, 
   return deg;
 }
 
-const JOINTS: Record<Exercise, { down: number; up: number; left: PoseLandmarkType[]; right: PoseLandmarkType[] }> = {
-  SQUAT: { down: 100, up: 160, left: [PoseLandmarkType.LeftHip, PoseLandmarkType.LeftKnee, PoseLandmarkType.LeftAnkle], right: [PoseLandmarkType.RightHip, PoseLandmarkType.RightKnee, PoseLandmarkType.RightAnkle] },
-  PUSHUP: { down: 95, up: 155, left: [PoseLandmarkType.LeftShoulder, PoseLandmarkType.LeftElbow, PoseLandmarkType.LeftWrist], right: [PoseLandmarkType.RightShoulder, PoseLandmarkType.RightElbow, PoseLandmarkType.RightWrist] }
+const JOINTS: Record<Exercise, PoseLandmarkType[][]> = {
+  SQUAT: [[PoseLandmarkType.LeftHip, PoseLandmarkType.LeftKnee, PoseLandmarkType.LeftAnkle], [PoseLandmarkType.RightHip, PoseLandmarkType.RightKnee, PoseLandmarkType.RightAnkle]],
+  PUSHUP: [[PoseLandmarkType.LeftShoulder, PoseLandmarkType.LeftElbow, PoseLandmarkType.LeftWrist], [PoseLandmarkType.RightShoulder, PoseLandmarkType.RightElbow, PoseLandmarkType.RightWrist]]
 };
+
+const DROP = 30;
+const BENT = 110;
+
+type Landmark = { type: string; x: number; y: number; inFrameLikelihood: number };
+
+function upright(byType: Map<string, Landmark>): boolean {
+  const [ls, rs, lh, rh] = [PoseLandmarkType.LeftShoulder, PoseLandmarkType.RightShoulder, PoseLandmarkType.LeftHip, PoseLandmarkType.RightHip].map(t => byType.get(t));
+  if (!ls || !rs || !lh || !rh || Math.min(lh.inFrameLikelihood, rh.inFrameLikelihood) < 0.5) return false;
+  const dy = (lh.y + rh.y - ls.y - rs.y) / 2;
+  const dx = Math.abs(lh.x + rh.x - ls.x - rs.x) / 2;
+  return dy > 1.1 * Math.abs(ls.x - rs.x) && dy > 2 * dx;
+}
 
 export class RepCounter {
   count = 0;
   private down = false;
+  private peak = -Infinity;
+  private trough = Infinity;
+  private recent: number[] = [];
 
   constructor(private readonly exercise: Exercise) { }
 
-  feed(landmarks: { type: string; x: number; y: number; inFrameLikelihood: number }[]): number {
-    const cfg = JOINTS[this.exercise];
-    const pick = (types: string[]) => types.map(t => landmarks.find(l => l.type === t));
-    const sides = [pick(cfg.left), pick(cfg.right)]
-      .filter(s => s.every(p => p && p.inFrameLikelihood > 0.5)) as { x: number; y: number; inFrameLikelihood: number }[][];
-    if (!sides.length) return this.count;
-    const best = sides.sort((a, b) => b.reduce((s, p) => s + p.inFrameLikelihood, 0) - a.reduce((s, p) => s + p.inFrameLikelihood, 0))[0];
-    const deg = angle(best[0], best[1], best[2]);
-    if (!this.down && deg < cfg.down) this.down = true;
-    else if (this.down && deg > cfg.up) {
-      this.down = false;
-      this.count++;
+  feed(landmarks: Landmark[]): number {
+    const byType = new Map(landmarks.map(l => [l.type, l]));
+    const sides = JOINTS[this.exercise].map(s => s.map(t => byType.get(t))).filter(s => s.every(p => p && p.inFrameLikelihood > 0.5)) as Landmark[][];
+    if (!sides.length || (this.exercise === 'PUSHUP' && upright(byType))) return this.count;
+    this.recent = [...this.recent.slice(-2), Math.min(...sides.map(s => angle(s[0], s[1], s[2])))];
+    const deg = [...this.recent].sort((a, b) => a - b)[Math.floor(this.recent.length / 2)];
+    if (!this.down) {
+      this.peak = Math.max(this.peak, deg);
+      if (deg < this.peak - DROP || deg < BENT) {
+        this.down = true;
+        this.trough = deg;
+      }
+    } else {
+      this.trough = Math.min(this.trough, deg);
+      if (deg > this.trough + DROP && deg > BENT + DROP) {
+        this.down = false;
+        this.count++;
+        this.peak = deg;
+      }
     }
     return this.count;
   }

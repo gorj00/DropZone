@@ -8,6 +8,7 @@
     <string name="app_lock_service_description">DropZone uses this accessibility service only to detect when you open an app you chose to lock (for example Instagram) and to show a lock screen until you finish your daily quests. It does not read, collect or share the content of any screen, keystrokes or personal data.</string>
     <string name="channel_reminders">Daily reminders</string>
     <string name="channel_community">Community</string>
+    <string name="channel_community_quiet">Community updates (silent)</string>
     <string name="channel_account">Account &amp; billing</string>
     <string name="health_connect_privacy_policy_url">https://dropzone.mobi/privacy/</string>
 </resources>

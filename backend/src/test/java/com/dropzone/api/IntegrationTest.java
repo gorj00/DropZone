@@ -49,12 +49,14 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 @TestPropertySource(properties = { "dropzone.auth.jwt-secret=" + IntegrationTest.JWT_SECRET, "dropzone.storage.create-bucket=false",
 		"dropzone.billing.revenuecat-webhook-secret=test-secret", "dropzone.billing.revenuecat-api-key=",
 		"dropzone.push.firebase-credentials=", "dropzone.admin-emails=moderator@test.dev",
-		"dropzone.jobs.audience=" + IntegrationTest.JOBS_AUDIENCE, "dropzone.jobs.invoker=" + IntegrationTest.JOBS_INVOKER })
+		"dropzone.jobs.audience=" + IntegrationTest.JOBS_AUDIENCE, "dropzone.jobs.invoker=" + IntegrationTest.JOBS_INVOKER,
+		"dropzone.jobs.status-token=" + IntegrationTest.STATUS_TOKEN })
 public abstract class IntegrationTest {
 
 	protected static final String JWT_SECRET = "test-jwt-secret-0123456789abcdef0123456789";
 	protected static final String JOBS_AUDIENCE = "https://api.test/internal/jobs";
 	protected static final String JOBS_INVOKER = "scheduler@jobs.test";
+	protected static final String STATUS_TOKEN = "test-status-token";
 	private static final SecureRandom RANDOM = new SecureRandom();
 
 	@Autowired

@@ -131,6 +131,13 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 	int claimVerifyPush(UUID id, Instant now, Instant before);
 
 	@Modifying
+	@Query(value = """
+			insert into comment_push_claims (user_id, feed_item_id, pushed_at) values (:id, :feedItemId, :now)
+			on conflict (user_id, feed_item_id) do update set pushed_at = excluded.pushed_at where comment_push_claims.pushed_at <= :before
+			""", nativeQuery = true)
+	int claimCommentPush(UUID id, UUID feedItemId, Instant now, Instant before);
+
+	@Modifying
 	@Query(value = "update users set last_seen_at = :now where id = :id and (last_seen_at is null or last_seen_at < :before)", nativeQuery = true)
 	int touchLastSeen(UUID id, Instant now, Instant before);
 

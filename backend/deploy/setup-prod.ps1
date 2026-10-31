@@ -45,6 +45,7 @@ if (-not (Exists { gcloud secrets describe prod-dropzone-db-password --project $
 }
 NewSecret 'prod-dropzone-jwt-secret' (RandomHex 48)
 NewSecret 'prod-dropzone-revenuecat-webhook-secret' (RandomHex 32)
+NewSecret 'prod-dropzone-status-token' (RandomHex 32)
 NewSecret 'prod-dropzone-unsplash-access-key' (gcloud secrets versions access latest --secret dev-dropzone-unsplash-access-key --project $Project)
 
 if (-not (Exists { gcloud storage buckets describe "gs://$Bucket" --project $Project })) {
@@ -54,7 +55,7 @@ if (-not (Exists { gcloud storage buckets describe "gs://$Bucket" --project $Pro
 gcloud projects add-iam-policy-binding $Project --member "serviceAccount:$Runtime" --role roles/cloudsql.client --format none
 gcloud projects add-iam-policy-binding $Project --member "serviceAccount:$Runtime" --role roles/firebasecloudmessaging.admin --format none
 gcloud projects add-iam-policy-binding $Project --member "serviceAccount:$Runtime" --role roles/serviceusage.serviceUsageConsumer --format none
-'prod-dropzone-db-password', 'prod-dropzone-jwt-secret', 'prod-dropzone-revenuecat-webhook-secret', 'prod-dropzone-unsplash-access-key' | ForEach-Object { SecretAccess $_ }
+'prod-dropzone-db-password', 'prod-dropzone-jwt-secret', 'prod-dropzone-revenuecat-webhook-secret', 'prod-dropzone-unsplash-access-key', 'prod-dropzone-status-token' | ForEach-Object { SecretAccess $_ }
 gcloud storage buckets add-iam-policy-binding "gs://$Bucket" --member "serviceAccount:$Runtime" --role roles/storage.objectAdmin --format none
 gcloud iam service-accounts add-iam-policy-binding $Runtime --project $Project --member "serviceAccount:$Runtime" --role roles/iam.serviceAccountTokenCreator --format none
 
@@ -84,7 +85,5 @@ foreach ($name in $jobs.Keys) {
 if (-not (Exists { gcloud beta run domain-mappings describe --domain api.dropzone.mobi --region $Region --project $Project })) {
     gcloud beta run domain-mappings create --service dropzone-api --domain api.dropzone.mobi --region $Region --project $Project
 }
-
-& (Join-Path $PSScriptRoot 'setup-monitoring.ps1')
 
 Write-Host 'Production is set up: https://api.dropzone.mobi (DNS: CNAME api -> ghs.googlehosted.com, DNS only in Cloudflare)'

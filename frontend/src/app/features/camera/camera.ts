@@ -34,6 +34,8 @@ function parseValue(raw: string, unit: ScaleUnit): number | null {
   styles: `
     .scan { position: absolute; left: 30px; right: 30px; height: 2px; background: linear-gradient(90deg, transparent, var(--accent-2), transparent); box-shadow: 0 0 14px var(--accent-2); animation: scan 2.6s ease-in-out infinite; z-index: 3; }
     @keyframes scan { 0%, 100% { top: 14%; } 50% { top: 78%; } }
+    .beat { display: inline-block; animation: beat 1.8s ease-in-out infinite; }
+    @keyframes beat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.18); } }
     .corner { position: absolute; width: 34px; height: 34px; z-index: 3; border-color: var(--bracket); }
   `,
   template: `
@@ -154,12 +156,13 @@ function parseValue(raw: string, unit: ScaleUnit): number | null {
           <span class="w-12 h-12 rounded-2xl bg-white/[.06] grid place-items-center text-mute opacity-50" aria-hidden="true"><app-icon name="imgoff" /></span>
           <button class="w-[80px] h-[80px] rounded-full grid place-items-center disabled:opacity-40"
                   style="box-shadow:0 0 0 3px var(--accent),0 0 30px rgba(var(--accent-rgb),.75)"
+                  [class.pulse]="mode() === 'REPS' && phase() === 'live'"
                   [attr.aria-label]="shutterLabel()" [disabled]="phase() !== 'live' && phase() !== 'counting'" (click)="shutter()">
             @if (phase() === 'counting') {
               <span class="w-[34px] h-[34px] rounded-lg" style="background:var(--accent)"></span>
             } @else {
               <span class="w-[64px] h-[64px] rounded-full bg-white grid place-items-center text-[#0b0c10]">
-                @if (mode() === 'REPS') { <span class="h text-[15px]">Go</span> }
+                @if (mode() === 'REPS') { <span class="h text-[64px] leading-none" [class.beat]="phase() === 'live'">Go</span> }
               </span>
             }
           </button>
@@ -403,7 +406,14 @@ export class CameraPage implements OnDestroy {
       if (this.vision.available && this.phase() === 'counting') {
         const frame = this.grab(480, 0.7);
         if (frame) {
-          try { this.reps.set(this.counter?.feed(await this.vision.pose(frame)) ?? this.reps()); } catch { }
+          try {
+            const landmarks = await this.vision.pose(frame);
+            if (!environment.production) {
+              const keep = landmarks.filter(l => /Shoulder|Elbow|Wrist|Hip|Knee|Ankle|Nose/.test(l.type));
+              console.log('[dz-pose]', JSON.stringify({ t: Math.round(performance.now()), ex: this.exercise(), reps: this.reps(), lm: keep.map(l => [l.type, Math.round(l.x), Math.round(l.y), Math.round(l.inFrameLikelihood * 100) / 100]) }));
+            }
+            this.reps.set(this.counter?.feed(landmarks) ?? this.reps());
+          } catch { }
         }
         if (this.counting && this.reps() >= this.target()) {
           await this.finishReps();

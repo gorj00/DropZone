@@ -32,9 +32,10 @@ describe('pushLink', () => {
       [{ type: 'ADMIN_REPORT', targetType: 'USER', targetId: 'u9' }, '/admin/reports/USER/u9'],
       [{ type: 'TRIAL_ENDING' }, '/paywall'],
       [{ type: 'TRIAL_ENDED', link: '/paywall' }, '/paywall'],
-      [{ type: 'PRO_ENDED', link: '/paywall' }, '/paywall'],
+      [{ type: 'PRO_ENDED', link: '/paywall' }, '/pro-ended'],
       [{ type: 'BILLING_ISSUE', link: PLAY }, PLAY],
       [{ type: 'PRO_BACK' }, '/today'],
+      [{ type: 'LIFETIME_PRO' }, '/today'],
       [{ type: 'DEADLINE_REMINDER', checkpointId: 'cp7', link: '/journey/cp7' }, '/journey/cp7'],
       [{ type: 'ACCOUNT_DELETION' }, '/today'],
       [{ type: 'ACCOUNT_SUSPENDED' }, '/today'],
@@ -49,6 +50,7 @@ describe('pushLink', () => {
     expect(pushLink({ type: 'DEADLINE_REMINDER', checkpointId: 'cp7' })).toBe('/journey/cp7');
     expect(pushLink({ type: 'DEADLINE_REMINDER', checkpointId: 'cp7', link: 'https://evil.test/x' })).toBe('/journey/cp7');
     expect(pushLink({ type: 'DEADLINE_REMINDER' })).toBe('/journey');
+    expect(pushLink({ type: 'COMMENT_REPLY', feedItemId: 'f9', commentId: 'c1' })).toBe('/post/f9');
   });
 
   it('falls back when ids or links are missing or foreign', () => {
@@ -56,7 +58,7 @@ describe('pushLink', () => {
     expect(pushLink({ type: 'VERIFIED' })).toBe('/journey');
     expect(pushLink({ type: 'HYPE' })).toBe('/squad');
     expect(pushLink({ type: 'ADMIN_REPORT', targetType: 'OTHER', targetId: 'x' })).toBe('/admin/reports');
-    expect(pushLink({ type: 'PRO_ENDED', link: 'https://evil.test' })).toBe('/paywall');
+    expect(pushLink({ type: 'PRO_ENDED', link: 'https://evil.test' })).toBe('/pro-ended');
     expect(pushLink({ type: 'BILLING_ISSUE', link: 'https://evil.test' }, 'pro_yearly:y')).toBe('https://play.google.com/store/account/subscriptions?sku=pro_yearly&package=com.dropzone.app');
     expect(pushLink({ type: 'BILLING_ISSUE' })).toBe('https://play.google.com/store/account/subscriptions?package=com.dropzone.app');
     expect(pushLink(null)).toBe('/today');
@@ -191,6 +193,17 @@ describe('PushService messages', () => {
     (await vi.waitFor(() => http.expectOne(`${API_URL}/notifications/unread-count`))).flush({ count: 3 });
     expect(TestBed.inject(ToastService).message()?.text).toBe('Mia hyped your post');
     http.expectNone(`${API_URL}/me`);
+    await session.clear();
+  });
+
+  it('bumps the bell without a toast for a quiet grouped update', async () => {
+    const { push, plugin, http, session } = await setup(fakePlugin('granted'));
+    await push.start();
+    (await putToken(http)).flush(null);
+
+    plugin.handlers['pushNotificationReceived']({ title: 'Mia and 2 others commented on your post', body: 'Nice', data: { type: 'COMMENT', feedItemId: 'f1', quiet: '1' } });
+    (await vi.waitFor(() => http.expectOne(`${API_URL}/notifications/unread-count`))).flush({ count: 3 });
+    expect(TestBed.inject(ToastService).message()).toBeNull();
     await session.clear();
   });
 

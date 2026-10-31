@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -58,7 +59,9 @@ public class RevenueCatRestClient implements RevenueCatClient {
 			if (info == null) {
 				return Optional.of(Entitlement.none());
 			}
-			return Optional.of(toEntitlement(info, response.subscriber().subscriptions()));
+			Entitlement e = toEntitlement(info, response.subscriber().subscriptions());
+			return Optional.of(new Entitlement(e.present(), e.expiresAt(), e.productId(), e.willRenew(), e.billingIssueAt(),
+					renewingPlay(response.subscriber().subscriptions(), Instant.now())));
 		}
 		catch (RestClientException | DateTimeParseException e) {
 			log.warn("RevenueCat refresh failed: {}", e.getMessage());
@@ -83,11 +86,47 @@ public class RevenueCatRestClient implements RevenueCatClient {
 		}
 	}
 
+	@Override
+	public boolean cancelPlaySubscription(String appUserId, String storeTransactionId) {
+		if (!configured()) {
+			return false;
+		}
+		try {
+			http.post()
+					.uri("/subscribers/{id}/subscriptions/{tx}/cancel", appUserId, storeTransactionId)
+					.header("Authorization", "Bearer " + apiKey)
+					.retrieve()
+					.toBodilessEntity();
+			return true;
+		}
+		catch (RestClientException e) {
+			log.warn("RevenueCat cancel of {} for {} failed: {}", storeTransactionId, appUserId, e.getMessage());
+			return false;
+		}
+	}
+
+	static List<String> renewingPlay(Map<String, SubscriptionInfo> subscriptions, Instant now) {
+		if (subscriptions == null) {
+			return List.of();
+		}
+		return subscriptions.entrySet().stream()
+				.filter(s -> !s.getKey().startsWith("rc_promo"))
+				.map(Map.Entry::getValue)
+				.filter(s -> "play_store".equals(s.store()) && s.storeTransactionId() != null && parse(s.unsubscribeDetectedAt()) == null
+						&& parse(s.refundedAt()) == null && parse(s.expiresDate()) != null && parse(s.expiresDate()).isAfter(now))
+				.map(SubscriptionInfo::storeTransactionId)
+				.toList();
+	}
+
 	private boolean configured() {
 		return apiKey != null && !apiKey.isBlank();
 	}
 
 	static Entitlement toEntitlement(EntitlementInfo info, Map<String, SubscriptionInfo> subscriptions) {
+		String product = info.productIdentifier();
+		if (product != null && product.startsWith("rc_promo") && product.endsWith("_lifetime")) {
+			return new Entitlement(true, null, product, false, null);
+		}
 		Instant expires = later(parse(info.expiresDate()), parse(info.gracePeriodExpiresDate()));
 		SubscriptionInfo sub = subscriptions == null || info.productIdentifier() == null ? null : subscriptions.get(info.productIdentifier());
 		if (sub == null) {
@@ -124,7 +163,8 @@ public class RevenueCatRestClient implements RevenueCatClient {
 	}
 
 	@JsonIgnoreProperties(ignoreUnknown = true)
-	record SubscriptionInfo(@JsonProperty("unsubscribe_detected_at") String unsubscribeDetectedAt,
+	record SubscriptionInfo(String store, @JsonProperty("store_transaction_id") String storeTransactionId,
+			@JsonProperty("expires_date") String expiresDate, @JsonProperty("unsubscribe_detected_at") String unsubscribeDetectedAt,
 			@JsonProperty("billing_issues_detected_at") String billingIssuesDetectedAt, @JsonProperty("refunded_at") String refundedAt) {
 	}
 }

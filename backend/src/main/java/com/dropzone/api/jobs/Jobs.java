@@ -3,11 +3,15 @@ package com.dropzone.api.jobs;
 import com.dropzone.api.billing.BillingService;
 import com.dropzone.api.common.ApiException;
 import com.dropzone.api.common.Tally;
+import com.dropzone.api.domain.JobRun;
+import com.dropzone.api.domain.JobRunRepository;
 import com.dropzone.api.notification.NotificationService;
 import com.dropzone.api.push.ReminderScheduler;
 import com.dropzone.api.storage.UploadCleanup;
 import com.dropzone.api.user.InactiveAccounts;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -32,9 +36,13 @@ public class Jobs {
 	private static final Logger log = LoggerFactory.getLogger(Jobs.class);
 
 	private final Map<String, Supplier<Tally>> registry = new LinkedHashMap<>();
+	private final JobRunRepository runs;
+	private final Clock clock;
 
 	public Jobs(ReminderScheduler reminders, BillingService billing, UploadCleanup uploads, InactiveAccounts inactive,
-			NotificationService notifications) {
+			NotificationService notifications, JobRunRepository runs, Clock clock) {
+		this.runs = runs;
+		this.clock = clock;
 		registry.put(DAILY_REMINDERS, reminders::remind);
 		registry.put(TRIAL_REMINDERS, reminders::remindTrials);
 		registry.put(DEADLINE_REMINDERS, reminders::remindDeadlines);
@@ -58,11 +66,31 @@ public class Jobs {
 			Tally tally = job.get();
 			long ms = Duration.ofNanos(System.nanoTime() - started).toMillis();
 			log.info("job={} {} ms={}", name, tally.line(), ms);
+			record(name, null);
 			return new JobResult(name, tally.counts(), ms);
 		}
 		catch (RuntimeException e) {
 			log.error("job={} failed after {} ms", name, Duration.ofNanos(System.nanoTime() - started).toMillis(), e);
+			record(name, e);
 			throw e;
+		}
+	}
+
+	private void record(String name, RuntimeException failure) {
+		try {
+			JobRun run = new JobRun();
+			run.name = name;
+			Instant now = clock.instant();
+			run.lastRunAt = now;
+			if (failure != null) {
+				String message = failure.getClass().getSimpleName() + ": " + failure.getMessage();
+				run.failedAt = now;
+				run.error = message.length() <= 300 ? message : message.substring(0, 299) + "…";
+			}
+			runs.save(run);
+		}
+		catch (RuntimeException e) {
+			log.warn("Could not record the run of job {}: {}", name, e.getMessage());
 		}
 	}
 

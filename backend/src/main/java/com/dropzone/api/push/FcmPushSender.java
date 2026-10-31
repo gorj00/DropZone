@@ -90,10 +90,15 @@ public class FcmPushSender implements PushSender {
 	}
 
 	static Message message(String token, PushType type, String title, String body, Map<String, String> data) {
+		AndroidNotification.Builder android = AndroidNotification.builder()
+				.setChannelId(data.containsKey(PushService.QUIET) ? PushType.Channel.COMMUNITY_QUIET : type.channel());
+		if (data.containsKey(PushService.TAG)) {
+			android.setTag(data.get(PushService.TAG));
+		}
 		return Message.builder()
 				.setToken(token)
 				.setNotification(Notification.builder().setTitle(title).setBody(body).build())
-				.setAndroidConfig(AndroidConfig.builder().setNotification(AndroidNotification.builder().setChannelId(type.channel()).build()).build())
+				.setAndroidConfig(AndroidConfig.builder().setNotification(android.build()).build())
 				.putAllData(data)
 				.build();
 	}

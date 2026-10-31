@@ -51,7 +51,7 @@ Uploaded files are served by fake-gcs-server at `http://localhost:4443/dropzone-
 ./gradlew build
 ```
 
-Docker must be running: integration tests start `postgres:17` with Testcontainers. There are unit tests for the rules (streak, unlock, checkpoint spacing, leaderboard, stats levels) and MockMvc integration tests for:
+Docker must be running: integration tests start `postgres:16` (same major version as the shared saas-db) with Testcontainers. There are unit tests for the rules (streak, unlock, checkpoint spacing, leaderboard, stats levels) and MockMvc integration tests for:
 
 - the onboarding → today → quest flow
 - PRO gating (402)

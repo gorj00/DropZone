@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
 import { API_URL } from '../../core/api/api.service';
 import { User } from '../../core/api/models';
@@ -60,6 +60,25 @@ async function render(patch: Partial<User>, receive = 'granted', native = true) 
   return { session, http, el, text, button, settle, plugin, appSettings, dataExport };
 }
 
+describe('SettingsPage handle check', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('checks the handle only after it is edited', async () => {
+    const { el, http, settle, session } = await render({ handle: 'jake.lifts', displayName: 'Jake' });
+    await new Promise(r => setTimeout(r, 450));
+    http.expectNone(r => r.url.endsWith('/users/handle-available'));
+    expect(el.textContent).not.toContain('Available');
+    const input = el.querySelector('input[autocomplete="username"]') as HTMLInputElement;
+    input.value = 'jake.lifts2';
+    input.dispatchEvent(new Event('input'));
+    await settle();
+    const check = await vi.waitFor(() => http.expectOne(r => r.url.endsWith('/users/handle-available')));
+    expect(check.request.body).toEqual({ handle: 'jake.lifts2' });
+    check.flush({ handle: 'jake.lifts2', valid: true, available: true, message: null });
+    await session.clear();
+  });
+});
+
 describe('SettingsPage plan', () => {
   beforeEach(() => localStorage.clear());
 
@@ -70,14 +89,13 @@ describe('SettingsPage plan', () => {
     await session.clear();
   });
 
-  it('says Ends · Resubscribe for a cancelled subscription and opens its Play page', async () => {
-    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+  it('says Ends · Resubscribe for a cancelled subscription and opens the plans', async () => {
     const { text, button, session } = await render({ pro: true, proExpiresAt: '2026-11-27T10:00:00Z', willRenew: false, proProductId: 'pro_yearly:yearly' });
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
     expect(text()).toContain('Ends Nov 27, 2026 · Resubscribe');
     expect(text()).not.toContain('Renews');
     button('DropZone PRO · Yearly')!.click();
-    expect(open).toHaveBeenCalledWith('https://play.google.com/store/account/subscriptions?sku=pro_yearly&package=com.dropzone.app', '_blank');
-    open.mockRestore();
+    expect(navigate).toHaveBeenCalledWith('/paywall');
     await session.clear();
   });
 
@@ -96,6 +114,14 @@ describe('SettingsPage plan', () => {
     button('PRO is on hold — fix your payment in Google Play to get it back')!.click();
     expect(open).toHaveBeenCalledWith('https://play.google.com/store/account/subscriptions?sku=pro_monthly&package=com.dropzone.app', '_blank');
     open.mockRestore();
+    await session.clear();
+  });
+
+  it('shows a scheduled plan switch instead of the renewal', async () => {
+    const { text, session } = await render({ pro: true, proExpiresAt: '2027-03-01T12:00:00Z', willRenew: true, proProductId: 'pro_yearly:yearly', pendingPlanId: 'pro_weekly', pendingPlanAt: '2027-03-01T12:00:00Z' });
+    expect(text()).toContain('DropZone PRO · Yearly');
+    expect(text()).toContain('Switches to Weekly on Mar 1, 2027');
+    expect(text()).not.toContain('Renews');
     await session.clear();
   });
 
@@ -221,6 +247,19 @@ describe('SettingsPage privacy and push switches', () => {
     req.flush(user({ verifyRequestPushes: false }));
     await settle();
     expect(button('Verify requests')!.getAttribute('aria-checked')).toBe('false');
+    await session.clear();
+  });
+
+  it('shows Comments pushes on by default and turns them off', async () => {
+    const { button, http, settle, session } = await render({});
+    const toggle = button('Comments')!;
+    expect(toggle.getAttribute('aria-checked')).toBe('true');
+    toggle.click();
+    const req = await patchOnce(http);
+    expect(req.request.body).toEqual({ commentPushes: false });
+    req.flush(user({ commentPushes: false }));
+    await settle();
+    expect(button('Comments')!.getAttribute('aria-checked')).toBe('false');
     await session.clear();
   });
 });

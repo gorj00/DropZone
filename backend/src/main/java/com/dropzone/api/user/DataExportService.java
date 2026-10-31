@@ -204,7 +204,7 @@ public class DataExportService {
 				user.slipUpTracking, user.skipRestDays, List.copyOf(user.lockedApps), user.streak, user.bestStreak, user.inviteCode,
 				user.createdAt, user.lastSeenAt, user.isProActive(now), user.proExpiresAt, user.proProductId, user.trialEndsAt,
 				user.termsVersion, user.privacyVersion, user.termsAcceptedAt, user.ageConfirmedAt, user.hiddenFromSearch,
-				user.hiddenFromLeaderboards, user.verifyRequestPushes, user.shareStats, user.shareStatsAt,
+				user.hiddenFromLeaderboards, user.verifyRequestPushes, user.commentPushes, user.shareStats, user.shareStatsAt,
 				user.regionSource, user.regionValue, user.regionEu, user.regionAt);
 	}
 

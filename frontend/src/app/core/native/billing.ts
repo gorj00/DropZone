@@ -95,6 +95,8 @@ export function hasPro(info: CustomerInfo | null | undefined): boolean {
 export const OTHER_ACCOUNT_MESSAGE = 'This subscription belongs to another DropZone account. Sign in with that account to use it.';
 const OTHER_ACCOUNT_CODES = ['7', '13', '40', 'RECEIPT_ALREADY_IN_USE_ERROR', 'RECEIPT_IN_USE_BY_OTHER_SUBSCRIBER_ERROR', 'PURCHASE_BELONGS_TO_OTHER_USER'];
 const ALREADY_PURCHASED_CODES = ['6', 'PRODUCT_ALREADY_PURCHASED_ERROR'];
+const NOT_ALLOWED_CODES = ['3', 'PURCHASE_NOT_ALLOWED_ERROR'];
+export const PAYMENT_FAILED_MESSAGE = 'The payment didn’t go through. Check your payment method in Google Play and try again.';
 
 function rcCodes(e: unknown): string[] {
   const err = e as { code?: unknown; readableErrorCode?: unknown; userInfo?: { readableErrorCode?: unknown } } | null;
@@ -148,7 +150,7 @@ export class BillingService {
 
   async checkOnStart(): Promise<void> {
     const user = this.session.user();
-    if (!user || subscribed(user) || this.checkedFor === user.id) return;
+    if (!user || this.checkedFor === user.id) return;
     this.checkedFor = user.id;
     try {
       const fresh = await this.api.refreshBilling();
@@ -206,6 +208,7 @@ export class BillingService {
         return 'pending';
       }
       if (isOtherAccountError(e)) throw new Error(OTHER_ACCOUNT_MESSAGE);
+      if (rcCodes(e).some(c => NOT_ALLOWED_CODES.includes(c))) throw new Error(PAYMENT_FAILED_MESSAGE);
       if (isAlreadyPurchased(e)) {
         try {
           this.session.setUser(await this.api.refreshBilling());
@@ -215,10 +218,15 @@ export class BillingService {
       }
       throw e;
     }
+    if (kind === 'renewal') {
+      try {
+        this.session.setUser(await this.api.scheduleSwitch(id));
+      } catch { }
+      return 'scheduled';
+    }
     try {
       this.session.setUser(await this.api.refreshBilling());
     } catch { }
-    if (kind === 'renewal') return 'scheduled';
     if (subscribed(this.session.user())) return 'done';
     void this.sync();
     return hasPro(info) ? 'done' : 'pending';

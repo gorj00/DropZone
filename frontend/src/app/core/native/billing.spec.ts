@@ -7,7 +7,7 @@ import { API_URL } from '../api/api.service';
 import { User } from '../api/models';
 import { authInterceptor } from '../auth';
 import { SessionStore } from '../session.store';
-import { BillingService, OTHER_ACCOUNT_MESSAGE, PURCHASES, PURCHASE_SYNC_DELAYS_MS, perMonth, planLabel, planOf, switchKind, toPlans } from './billing';
+import { BillingService, OTHER_ACCOUNT_MESSAGE, PAYMENT_FAILED_MESSAGE, PURCHASES, PURCHASE_SYNC_DELAYS_MS, perMonth, planLabel, planOf, switchKind, toPlans } from './billing';
 import { LockService } from './lock';
 
 const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -189,6 +189,16 @@ describe('BillingService.purchase', () => {
     await session.clear();
   });
 
+  it('explains a declined payment instead of the generic not allowed error', async () => {
+    const sdk = fakeSdk();
+    sdk.purchasePackage.mockRejectedValueOnce({ code: '3', message: 'The device or user is not allowed to make the purchase.', readableErrorCode: 'PURCHASE_NOT_ALLOWED_ERROR' });
+    const { billing, session, http } = await setup({ sdk });
+    await billing.init();
+    await expect(billing.purchase('pro_monthly')).rejects.toMatchObject({ message: PAYMENT_FAILED_MESSAGE });
+    http.expectNone(`${API_URL}/billing/refresh`);
+    await session.clear();
+  });
+
   it('explains a receipt that belongs to another DropZone account', async () => {
     const sdk = fakeSdk();
     sdk.purchasePackage.mockRejectedValueOnce({ code: '7', message: 'This receipt is already in use.' });
@@ -243,8 +253,11 @@ describe('BillingService.purchase', () => {
     const { billing, sdk, session, http } = await setup({ user: { pro: true, proProductId: 'pro_yearly:yearly', willRenew: true } });
     await billing.init();
     const result = billing.purchase('pro_weekly');
-    (await expect1(http, 'POST', '/billing/refresh')).flush(user({ pro: true, proProductId: 'pro_yearly:yearly', willRenew: true }));
+    const req = await expect1(http, 'POST', '/billing/pending-switch');
+    expect(req.request.body).toEqual({ productId: 'pro_weekly' });
+    req.flush(user({ pro: true, proProductId: 'pro_yearly:yearly', willRenew: true, pendingPlanId: 'pro_weekly', pendingPlanAt: '2027-03-01T12:00:00Z' }));
     expect(await result).toBe('scheduled');
+    expect(session.user()?.pendingPlanId).toBe('pro_weekly');
     expect(sdk.purchasePackage).toHaveBeenCalledWith(expect.objectContaining({
       aPackage: PACKAGES[0],
       storeProductChangeInfo: { oldProductIdentifier: 'pro_yearly', replacementMode: 'DEFERRED' }
@@ -320,10 +333,12 @@ describe('BillingService.checkOnStart', () => {
     await session.clear();
   });
 
-  it('skips subscribers and ignores a failed check', async () => {
-    const { billing, session, http } = await setup({ user: { pro: true } });
-    await billing.checkOnStart();
-    http.expectNone(`${API_URL}/billing/refresh`);
+  it('checks subscribers too, so a lifetime grant replaces their subscription, and ignores a failed check', async () => {
+    const { billing, session, http } = await setup({ user: { pro: true, proProductId: 'pro_monthly:monthly', proExpiresAt: '2226-09-12T07:42:00Z', willRenew: true } });
+    const first = billing.checkOnStart();
+    (await expect1(http, 'POST', '/billing/refresh')).flush(user({ pro: true, proProductId: 'rc_promo_pro_lifetime', proExpiresAt: null, willRenew: false }));
+    await first;
+    expect(session.user()?.proProductId).toBe('rc_promo_pro_lifetime');
 
     session.setUser(user({ id: 'u2' }));
     const check = billing.checkOnStart();

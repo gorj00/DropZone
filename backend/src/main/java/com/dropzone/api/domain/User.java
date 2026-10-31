@@ -24,6 +24,8 @@ public class User {
 
 	public static final Duration RENEWAL_LEEWAY = Duration.ofHours(6);
 
+	public static final Duration PENDING_SWITCH_GRACE = Duration.ofDays(1);
+
 	@Id
 	public UUID id;
 
@@ -68,6 +70,12 @@ public class User {
 	public Instant billingIssueAt;
 
 	public boolean billingHold;
+
+	public String pendingProductId;
+
+	public Instant pendingSwitchAt;
+
+	public Instant lifetimeAt;
 
 	public Instant billingEventAt;
 
@@ -133,6 +141,8 @@ public class User {
 
 	public boolean verifyRequestPushes = true;
 
+	public boolean commentPushes = true;
+
 	public boolean shareStats;
 
 	public Instant shareStatsAt;
@@ -177,6 +187,19 @@ public class User {
 		return expiresAt == null || (willRenew ? expiresAt.plus(RENEWAL_LEEWAY) : expiresAt).isAfter(now);
 	}
 
+	public String pendingPlan(Instant now) {
+		if (pendingProductId == null || pendingSwitchAt == null || !isSubscribed(now)) {
+			return null;
+		}
+		if (now.isAfter(pendingSwitchAt.plus(PENDING_SWITCH_GRACE))) {
+			return null;
+		}
+		if (proProductId != null && (proProductId.equals(pendingProductId) || proProductId.startsWith(pendingProductId + ":"))) {
+			return null;
+		}
+		return pendingProductId;
+	}
+
 	public boolean hasSubscribed() {
 		return pro || proEndedAt != null;
 	}
@@ -200,6 +223,6 @@ public class User {
 	}
 
 	public boolean isTrialActive(Instant now) {
-		return trialEndsAt != null && trialEndsAt.isAfter(now);
+		return trialEndsAt != null && trialEndsAt.isAfter(now) && !hasSubscribed();
 	}
 }

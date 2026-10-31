@@ -30,7 +30,7 @@ export const APP_SETTINGS = new InjectionToken<Pick<AppSettingsPlugin, 'openNoti
 
 export const PUSH_ASKED_KEY = 'dz-push-asked';
 export const UNREGISTER_TIMEOUT_MS = 5000;
-const ACCOUNT_TYPES = ['TRIAL_ENDED', 'BILLING_ISSUE', 'PRO_ENDED', 'PRO_BACK', 'ACCOUNT_SUSPENDED'];
+const ACCOUNT_TYPES = ['TRIAL_ENDED', 'BILLING_ISSUE', 'PRO_ENDED', 'PRO_BACK', 'LIFETIME_PRO', 'ACCOUNT_SUSPENDED'];
 
 const toPermission = (s: PermissionStatus): PushPermission => (s.receive === 'granted' ? 'granted' : s.receive === 'denied' ? 'denied' : 'prompt');
 
@@ -99,7 +99,7 @@ export class PushService {
     void this.notifications.refresh();
     if (ACCOUNT_TYPES.includes(String(n.data?.['type'] ?? ''))) void this.session.refresh().catch(() => undefined);
     const text = n.title || n.body;
-    if (text) this.toast.show(text);
+    if (text && n.data?.['quiet'] !== '1') this.toast.show(text);
   }
 
   async open(data: Record<string, unknown> | null | undefined): Promise<void> {

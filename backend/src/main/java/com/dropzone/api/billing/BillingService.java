@@ -41,11 +41,13 @@ public class BillingService {
 	static final Duration HOLD_MAX = Duration.ofDays(60);
 	static final String PLAY_PACKAGE = "com.dropzone.app";
 	public static final String PAYWALL = "/paywall";
+	static final String PRO_ENDED_SCREEN = "/pro-ended";
 
 	private static final Logger log = LoggerFactory.getLogger(BillingService.class);
 	private static final Set<String> GRANTS = Set.of("INITIAL_PURCHASE", "RENEWAL", "PRODUCT_CHANGE", "UNCANCELLATION",
 			"NON_RENEWING_PURCHASE", "SUBSCRIPTION_EXTENDED", "TEMPORARY_ENTITLEMENT_GRANT");
 	private static final Set<String> RENEWING = Set.of("INITIAL_PURCHASE", "RENEWAL", "PRODUCT_CHANGE", "UNCANCELLATION");
+	private static final Set<String> PLANS = Set.of("pro_weekly", "pro_monthly", "pro_yearly");
 
 	private final UserRepository users;
 	private final UserService userService;
@@ -76,12 +78,29 @@ public class BillingService {
 	public UserDto refresh(UUID userId) {
 		User user = userService.get(userId);
 		Optional<RevenueCatClient.Entitlement> entitlement = revenueCat.entitlement(user.id.toString(), entitlement());
-		return tx.execute(status -> {
+		UserDto dto = tx.execute(status -> {
 			User fresh = userService.lock(userId);
 			Instant now = clock.instant();
 			fresh.proRefreshedAt = now;
 			entitlement.ifPresent(e -> update(fresh, now, () -> applyEntitlement(fresh, e, now, null)));
 			return userService.toDto(fresh);
+		});
+		entitlement.ifPresent(e -> lifetime(userId, e));
+		return dto;
+	}
+
+	public UserDto scheduleSwitch(UUID userId, String productId) {
+		if (productId == null || !PLANS.contains(productId)) {
+			throw ApiException.validation("Unknown plan");
+		}
+		return tx.execute(status -> {
+			User user = userService.lock(userId);
+			if (!user.isSubscribed(clock.instant()) || user.proExpiresAt == null) {
+				throw ApiException.conflict("There's no renewing subscription to switch");
+			}
+			user.pendingProductId = productId;
+			user.pendingSwitchAt = user.proExpiresAt;
+			return userService.toDto(user);
 		});
 	}
 
@@ -134,11 +153,12 @@ public class BillingService {
 		if (event == null || event.type() == null || "TEST".equals(event.type())) {
 			return;
 		}
+		log.info("RevenueCat {} {} in {} for app user {}", event.type(), event.id(), event.environment(), event.appUserId());
 		if (!forEntitlement(event)) {
 			return;
 		}
 		if (event.id() != null && events.existsById(event.id())) {
-			log.info("RevenueCat event {} ({}) already processed", event.id(), event.type());
+			log.info("RevenueCat event {} ({}, {}) already processed", event.id(), event.type(), event.environment());
 			return;
 		}
 		if ("TRANSFER".equals(event.type())) {
@@ -149,11 +169,12 @@ public class BillingService {
 		}
 		Optional<UUID> userId = findUser(event);
 		if (userId.isEmpty()) {
-			log.info("RevenueCat {} for unknown app user {}", event.type(), event.appUserId());
+			log.info("RevenueCat {} ({}) for unknown app user {}", event.type(), event.environment(), event.appUserId());
 			tx.executeWithoutResult(status -> record(event));
 			return;
 		}
 		Optional<RevenueCatClient.Entitlement> current = revenueCat.entitlement(userId.get().toString(), entitlement());
+		current.ifPresent(e -> lifetime(userId.get(), e));
 		tx.executeWithoutResult(status -> {
 			if (!record(event)) {
 				return;
@@ -166,7 +187,7 @@ public class BillingService {
 					applyEntitlement(user, current.get(), now, event.type());
 				}
 				else if (at != null && user.billingEventAt != null && at.isBefore(user.billingEventAt)) {
-					log.info("RevenueCat {} {} is older than the last applied event, ignored", event.type(), event.id());
+					log.info("RevenueCat {} {} ({}) is older than the last applied event, ignored", event.type(), event.id(), event.environment());
 				}
 				else {
 					applyEvent(user, event, now);
@@ -176,6 +197,39 @@ public class BillingService {
 				}
 			});
 		});
+	}
+
+	private void lifetime(UUID userId, RevenueCatClient.Entitlement e) {
+		boolean noticed = users.findById(userId).map(u -> u.lifetimeAt != null).orElse(false);
+		if (!e.lifetime()) {
+			if (noticed) {
+				tx.executeWithoutResult(status -> userService.lock(userId).lifetimeAt = null);
+			}
+			return;
+		}
+		if (noticed || !Boolean.TRUE.equals(tx.execute(status -> claimLifetime(userId)))) {
+			return;
+		}
+		List<String> renewing = e.renewingPlayTransactions();
+		for (String transaction : renewing) {
+			if (!revenueCat.cancelPlaySubscription(userId.toString(), transaction)) {
+				tx.executeWithoutResult(status -> userService.lock(userId).lifetimeAt = null);
+				return;
+			}
+		}
+		String body = renewing.isEmpty() ? "Every PRO feature is yours, for good."
+				: "We cancelled your Google Play subscription, so you won't be charged again.";
+		tx.executeWithoutResult(status -> message(userService.lock(userId), NotificationType.LIFETIME_PRO, PushType.LIFETIME_PRO,
+				"You've got PRO for life!", body, Map.of("link", "/today")));
+	}
+
+	private boolean claimLifetime(UUID userId) {
+		User user = userService.lock(userId);
+		if (user.lifetimeAt != null) {
+			return false;
+		}
+		user.lifetimeAt = clock.instant();
+		return true;
 	}
 
 	private boolean record(RevenueCatEvent.Event event) {
@@ -271,6 +325,10 @@ public class BillingService {
 		boolean endedBefore = user.proEndedAt != null;
 		Instant issueBefore = user.billingIssueAt;
 		change.run();
+		if (user.pendingProductId != null && user.pendingPlan(now) == null) {
+			user.pendingProductId = null;
+			user.pendingSwitchAt = null;
+		}
 		if (wasPro && !user.pro && user.proEndedAt == null) {
 			user.proEndedAt = user.proExpiresAt != null && user.proExpiresAt.isBefore(now) ? user.proExpiresAt : now;
 			if (user.billingHold) {
@@ -280,7 +338,7 @@ public class BillingService {
 			}
 			else {
 				message(user, NotificationType.PRO_ENDED, PushType.PRO_ENDED, "Your PRO subscription ended",
-						"You're on Free now. Your PRO settings are saved and come back when you resubscribe.", Map.of("link", PAYWALL));
+						"You're on Free now. Your PRO settings are saved and come back when you resubscribe.", Map.of("link", PRO_ENDED_SCREEN));
 			}
 		}
 		boolean subscribed = user.isSubscribed(now);

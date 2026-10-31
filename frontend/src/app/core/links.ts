@@ -19,10 +19,11 @@ function playLink(link: unknown, productId: string | null | undefined): string {
 export function notificationLink(n: AppNotification, productId?: string | null): string | null {
   switch (n.type) {
     case 'TRIAL_ENDING':
-    case 'TRIAL_ENDED':
-    case 'PRO_ENDED': return '/paywall';
+    case 'TRIAL_ENDED': return '/paywall';
+    case 'PRO_ENDED': return '/pro-ended';
     case 'BILLING_ISSUE': return playSubscriptionsUrl(productId);
-    case 'PRO_BACK': return '/today';
+    case 'PRO_BACK':
+    case 'LIFETIME_PRO': return '/today';
     case 'FRIEND_REQUEST':
     case 'FRIEND_ACCEPTED': return '/squad/friends';
     case 'ADMIN_REPORT':
@@ -51,7 +52,8 @@ export function pushLink(data: Record<string, unknown> | null | undefined, produ
     case 'VERIFIED': return proofId ? `/p/${proofId}` : '/journey';
     case 'PROOF_REJECTED': return proofId ? `/p/${proofId}` : '/today';
     case 'HYPE':
-    case 'COMMENT': return feedItemId ? `/post/${feedItemId}` : '/squad';
+    case 'COMMENT':
+    case 'COMMENT_REPLY': return feedItemId ? `/post/${feedItemId}` : '/squad';
     case 'FRIEND_REQUEST':
     case 'FRIEND_ACCEPTED': return '/squad/friends';
     case 'ADMIN_REPORT': {
@@ -60,8 +62,8 @@ export function pushLink(data: Record<string, unknown> | null | undefined, produ
       return type && id && REPORT_TARGETS.includes(type) ? `/admin/reports/${type}/${id}` : '/admin/reports';
     }
     case 'TRIAL_ENDING':
-    case 'TRIAL_ENDED':
-    case 'PRO_ENDED': return appLink(d['link'], '/paywall');
+    case 'TRIAL_ENDED': return appLink(d['link'], '/paywall');
+    case 'PRO_ENDED': return '/pro-ended';
     case 'BILLING_ISSUE': return playLink(d['link'], productId);
     case 'DEADLINE_REMINDER': {
       const id = value('checkpointId');

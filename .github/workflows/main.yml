@@ -86,7 +86,7 @@ jobs:
       - uses: google-github-actions/setup-gcloud@v3
       - run: gcloud auth configure-docker europe-west4-docker.pkg.dev --quiet
       - run: |
-          docker build -t "$IMAGE:$GITHUB_SHA" -t "$IMAGE:dev" backend
+          docker build --build-arg "GIT_SHA=$GITHUB_SHA" -t "$IMAGE:$GITHUB_SHA" -t "$IMAGE:dev" backend
           docker push "$IMAGE:$GITHUB_SHA"
           docker push "$IMAGE:dev"
       - run: gcloud run deploy dropzone-api-dev --project "$PROJECT" --region "$REGION" --image "$IMAGE:$GITHUB_SHA" --quiet

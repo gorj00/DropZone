@@ -17,7 +17,7 @@ class ProductionGuardTest {
 	private static final String CLOUD_SQL = "jdbc:postgresql:///dropzone?cloudSqlInstance=p:r:i&socketFactory=com.google.cloud.sql.postgres.SocketFactory";
 
 	private static final AppProperties.Jobs JOBS = new AppProperties.Jobs(false, "https://api.example.com/internal/jobs",
-			"scheduler@project.iam.gserviceaccount.com");
+			"scheduler@project.iam.gserviceaccount.com", null);
 
 	private static AppProperties props(boolean devLogin, String jwt, String webhook, String endpoint, String publicUrl, List<String> cors,
 			String firebase) {
@@ -56,7 +56,7 @@ class ProductionGuardTest {
 	@Test
 	void jobEndpointsMustBeLockedToTheScheduler() {
 		AppProperties open = props(false, "a-real-secret-0123456789abcdef0123456789", "real-webhook-secret", "",
-				"https://storage.googleapis.com/bucket", List.of("https://localhost"), "adc", new AppProperties.Jobs(false, " ", null));
+				"https://storage.googleapis.com/bucket", List.of("https://localhost"), "adc", new AppProperties.Jobs(false, " ", null, null));
 		assertThat(ProductionGuard.problems(open, CLOUD_SQL, true)).containsExactly("JOBS_AUDIENCE must be set", "JOBS_INVOKER must be set");
 	}
 

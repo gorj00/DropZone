@@ -80,8 +80,9 @@ describe('account notifications', () => {
   it('links trial, billing and PRO notices', () => {
     const system = (type: AppNotification['type']) => note('n', { type, actor: null, feedItemId: null });
     expect(notificationLink(system('TRIAL_ENDED'))).toBe('/paywall');
-    expect(notificationLink(system('PRO_ENDED'))).toBe('/paywall');
+    expect(notificationLink(system('PRO_ENDED'))).toBe('/pro-ended');
     expect(notificationLink(system('PRO_BACK'))).toBe('/today');
+    expect(notificationLink(system('LIFETIME_PRO'))).toBe('/today');
     expect(notificationLink(system('BILLING_ISSUE'), 'pro_monthly:monthly')).toBe(play);
   });
 

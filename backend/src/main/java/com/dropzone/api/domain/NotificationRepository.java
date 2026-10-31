@@ -25,6 +25,12 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
 			""")
 	long countUnread(UUID userId, Collection<UUID> hidden);
 
+	@Query("""
+			select count(distinct n.actorId) from Notification n where n.userId = :userId and n.feedItemId = :feedItemId
+			and n.type in :types and n.readAt is null and n.retracted = false and n.actorId not in :hidden
+			""")
+	long countUnreadCommenters(UUID userId, UUID feedItemId, Collection<NotificationType> types, Collection<UUID> hidden);
+
 	Optional<Notification> findFirstByTypeAndActorIdAndFeedItemId(NotificationType type, UUID actorId, UUID feedItemId);
 
 	void deleteByTypeAndActorIdAndCommentId(NotificationType type, UUID actorId, UUID commentId);

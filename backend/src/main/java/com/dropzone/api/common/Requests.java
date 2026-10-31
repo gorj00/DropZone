@@ -56,7 +56,7 @@ public final class Requests {
 			@Min(5) @Max(240) Integer minutesPerQuest, Boolean publicByDefault, Verification defaultVerification,
 			Boolean slipUpTracking, @Size(max = 64) String timezone, WeightUnit weightUnit, LengthUnit lengthUnit,
 			@Size(max = 150) String bio, @Size(max = MAX_URL) String avatarUrl, Boolean trialEndAcknowledged, Boolean proEndAcknowledged,
-			Boolean skipRestDays, Boolean hiddenFromSearch, Boolean hiddenFromLeaderboards, Boolean verifyRequestPushes,
+			Boolean skipRestDays, Boolean hiddenFromSearch, Boolean hiddenFromLeaderboards, Boolean verifyRequestPushes, Boolean commentPushes,
 			Boolean shareStats, @Valid Region region) {
 	}
 
@@ -128,7 +128,7 @@ public final class Requests {
 			PostVisibility visibility) {
 	}
 
-	public record CreateComment(@NotBlank @Size(max = 500) String body) {
+	public record CreateComment(@NotBlank @Size(max = 500) String body, UUID replyToId) {
 	}
 
 	public record CreateReport(@NotNull ReportTarget targetType, @NotNull UUID targetId, @Size(max = 280) String reason) {

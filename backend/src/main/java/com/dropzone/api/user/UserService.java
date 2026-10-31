@@ -153,8 +153,8 @@ public class UserService {
 				user.timezone, user.isTrialActive(now) && !user.isSubscribed(now), user.trialEndsAt, user.weightUnit, user.lengthUnit,
 				isAdmin(user), user.bio, user.isTrialEndPending(now), consentRequired(user), user.isSuspended(),
 				user.willRenew && user.isSubscribed(now), user.proProductId, user.billingIssueAt != null, user.isProEndPending(now),
-				user.skipRestDays, user.hiddenFromSearch, user.hiddenFromLeaderboards, user.verifyRequestPushes, user.shareStats,
-				user.billingHold && !user.isSubscribed(now));
+				user.skipRestDays, user.hiddenFromSearch, user.hiddenFromLeaderboards, user.verifyRequestPushes, user.commentPushes,
+				user.shareStats, user.billingHold && !user.isSubscribed(now), user.pendingPlan(now), user.pendingPlan(now) == null ? null : user.pendingSwitchAt);
 	}
 
 	private static void setShareStats(User user, boolean share, Instant now) {
@@ -312,6 +312,9 @@ public class UserService {
 		}
 		if (req.verifyRequestPushes() != null) {
 			user.verifyRequestPushes = req.verifyRequestPushes();
+		}
+		if (req.commentPushes() != null) {
+			user.commentPushes = req.commentPushes();
 		}
 		if (req.shareStats() != null) {
 			setShareStats(user, req.shareStats(), clock.instant());

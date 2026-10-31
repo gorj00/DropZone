@@ -87,6 +87,21 @@ class RevenueCatRestClientTest {
 	}
 
 	@Test
+	void readsALifetimeGrantAsNeverEndingAndListsRenewingPlaySubscriptions() {
+		body = """
+				{"subscriber":{"entitlements":{"pro":{"expires_date":"2226-09-12T07:42:00Z","product_identifier":"rc_promo_pro_lifetime"}},
+				 "subscriptions":{"rc_promo_pro_lifetime":{"store":"promotional","expires_date":"2226-09-12T07:42:00Z"},
+				 "pro_monthly":{"store":"play_store","store_transaction_id":"GPA.1","expires_date":"2030-01-01T00:00:00Z"},
+				 "pro_weekly":{"store":"play_store","store_transaction_id":"GPA.2","expires_date":"2030-01-01T00:00:00Z","unsubscribe_detected_at":"2026-01-01T00:00:00Z"},
+				 "pro_yearly":{"store":"play_store","store_transaction_id":"GPA.3","expires_date":"2020-01-01T00:00:00Z"}}}}""";
+		RevenueCatClient.Entitlement e = client(Duration.ofSeconds(2)).entitlement("u1", "pro").orElseThrow();
+		assertThat(e.lifetime()).isTrue();
+		assertThat(e.expiresAt()).isNull();
+		assertThat(e.willRenew()).isFalse();
+		assertThat(e.renewingPlayTransactions()).containsExactly("GPA.1");
+	}
+
+	@Test
 	void hangingServerKeepsTheStoredState() {
 		delayMs = 2000;
 		long started = System.nanoTime();

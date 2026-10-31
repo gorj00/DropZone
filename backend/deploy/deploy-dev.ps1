@@ -18,7 +18,9 @@ if (-not (Test-Path $EnvFile)) {
     throw "Missing $EnvFile"
 }
 
-docker build -t $Image $Backend
+$Sha = git -C $Backend rev-parse --short HEAD
+if (git -C $Backend status --porcelain) { $Sha += '-dirty' }
+docker build --build-arg "GIT_SHA=$Sha" -t $Image $Backend
 if ($LASTEXITCODE -ne 0) { throw 'docker build failed' }
 
 docker push $Image

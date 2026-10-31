@@ -31,6 +31,6 @@ public record AppProperties(Auth auth, Storage storage, Push push, Billing billi
 	public record App(int minVersionCode) {
 	}
 
-	public record Jobs(boolean inProcess, String audience, String invoker) {
+	public record Jobs(boolean inProcess, String audience, String invoker, String statusToken) {
 	}
 }

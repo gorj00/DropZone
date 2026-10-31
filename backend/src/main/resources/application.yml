@@ -61,6 +61,7 @@ dropzone:
     in-process: ${JOBS_IN_PROCESS:true}
     audience: ${JOBS_AUDIENCE:}
     invoker: ${JOBS_INVOKER:}
+    status-token: ${STATUS_TOKEN:}
   moderation:
     min-reporter-age: ${MIN_REPORTER_AGE:3d}
   invite-base-url: https://dropzone.mobi/invite/

@@ -1,10 +1,9 @@
 import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api/api.service';
 import { Leaderboard, LeaderboardEntry, Path, Period } from '../../core/api/models';
 import { PhotoLinks } from '../../core/photo-links';
 import { SessionStore } from '../../core/session.store';
-import { SocialActions } from '../../core/social';
 import { ThemeService } from '../../core/theme.service';
 import { UnitsService } from '../../core/units';
 import { Avatar } from '../../ui/bits';
@@ -127,7 +126,7 @@ export function formatPercent(percent: number): string {
 export class LeaderboardSwiper {
   private readonly api = inject(ApiService);
   private readonly session = inject(SessionStore);
-  private readonly social = inject(SocialActions);
+  private readonly router = inject(Router);
   protected readonly theme = inject(ThemeService);
   private readonly units = inject(UnitsService);
   private readonly track = viewChild.required<ElementRef<HTMLElement>>('track');
@@ -157,11 +156,8 @@ export class LeaderboardSwiper {
     return b.entries.every(e => this.isMe(e));
   }
 
-  protected async openUser(e: LeaderboardEntry): Promise<void> {
-    if (this.isMe(e)) return;
-    if ((await this.social.userMenu(e.user)) === 'blocked') {
-      for (const p of PAGES) if (this.boards()[p.id]) this.load(p.id);
-    }
+  protected openUser(e: LeaderboardEntry): void {
+    if (!this.isMe(e)) void this.router.navigate(['/u', e.user.id]);
   }
 
   protected title(p: Period): string {

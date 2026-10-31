@@ -152,13 +152,16 @@ describe('PaywallPage', () => {
   });
 
   it('welcomes a buyer and closes even when the backend still says Free', async () => {
-    const { button, http, session } = await render();
+    const { button, http, session, settle, text } = await render();
     const router = TestBed.inject(Router);
     const navigate = vi.spyOn(router, 'navigateByUrl');
     const toast = TestBed.inject(ToastService);
 
     button('Subscribe')!.click();
-    (await vi.waitFor(() => http.expectOne(`${API_URL}/billing/refresh`))).flush(user({ pro: false }));
+    const refresh = await vi.waitFor(() => http.expectOne(`${API_URL}/billing/refresh`));
+    await settle();
+    expect(text()).toContain('Confirming with Google Play…');
+    refresh.flush(user({ pro: false }));
     await vi.waitFor(() => expect(toast.message()?.text).toBe('Welcome to PRO. Every quest is yours.'));
     expect(toast.message()?.error).toBe(false);
     expect(navigate).toHaveBeenCalledWith('/today');
@@ -196,8 +199,19 @@ describe('PaywallPage', () => {
     [...el.querySelectorAll('button')].find(b => b.textContent?.includes('Weekly'))!.click();
     await settle();
     button('Switch to Weekly')!.click();
-    (await vi.waitFor(() => http.expectOne(`${API_URL}/billing/refresh`))).flush(user({ pro: true, proProductId: 'pro_yearly:yearly', willRenew: true, proExpiresAt: '2027-03-01T12:00:00Z' }));
+    (await vi.waitFor(() => http.expectOne(`${API_URL}/billing/pending-switch`))).flush(user({ pro: true, proProductId: 'pro_yearly:yearly', willRenew: true, proExpiresAt: '2027-03-01T12:00:00Z', pendingPlanId: 'pro_weekly', pendingPlanAt: '2027-03-01T12:00:00Z' }));
     await vi.waitFor(() => expect(toast.message()?.text).toBe('Your plan switches to Weekly on Mar 1, 2027.'));
+    await session.clear();
+  });
+
+  it('marks a scheduled plan as next, explains it and only offers Google Play', async () => {
+    const { text, button, el, session } = await render({ user: { pro: true, proProductId: 'pro_yearly:yearly', willRenew: true, proExpiresAt: '2027-03-01T12:00:00Z', pendingPlanId: 'pro_weekly', pendingPlanAt: '2027-03-01T12:00:00Z' } });
+    expect(text()).toContain('NEXT');
+    expect(text()).toContain('Your plan switches to Weekly on Mar 1, 2027 when your Yearly plan renews. To keep Yearly, cancel the change in Google Play.');
+    expect(button('Switch to Weekly')).toBeUndefined();
+    expect(button('Switch to Monthly')).toBeUndefined();
+    expect([...el.querySelectorAll('button')].filter(b => /Weekly|Monthly|Yearly/.test(b.textContent ?? '') && !(b as HTMLButtonElement).disabled)).toHaveLength(0);
+    expect(button('Manage in Google Play')).toBeDefined();
     await session.clear();
   });
 

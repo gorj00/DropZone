@@ -33,7 +33,7 @@ public class CommentController {
 
 	@PostMapping("/feed/{id}/comments")
 	CommentDto add(@CurrentUser UUID userId, @PathVariable UUID id, @Valid @RequestBody Requests.CreateComment req) {
-		return comments.add(userId, id, req.body());
+		return comments.add(userId, id, req.body(), req.replyToId());
 	}
 
 	@PostMapping("/comments/{id}/like")

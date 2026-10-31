@@ -15,7 +15,7 @@ class JobAuthTest {
 			List.of(audience), "scheduler@p.iam.gserviceaccount.com", true);
 
 	private static AppProperties props(String audience, String invoker) {
-		return new AppProperties(null, null, null, null, null, null, null, null, new AppProperties.Jobs(false, audience, invoker), null,
+		return new AppProperties(null, null, null, null, null, null, null, null, new AppProperties.Jobs(false, audience, invoker, null), null,
 				null);
 	}
 

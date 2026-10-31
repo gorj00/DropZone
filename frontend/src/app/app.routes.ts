@@ -34,6 +34,7 @@ export const routes: Routes = [
   { path: 'squad', canActivate: [authGuard], loadComponent: () => import('./features/squad/squad').then(m => m.SquadPage) },
   { path: 'squad/friends', canActivate: [authGuard], loadComponent: () => import('./features/squad/friends').then(m => m.FriendsPage) },
   { path: 'p/:id', canActivate: [signedInGuard], loadComponent: () => import('./features/squad/proof').then(m => m.ProofPage) },
+  { path: 'u/:id', canActivate: [authGuard], loadComponent: () => import('./features/squad/user').then(m => m.UserPage) },
   { path: 'post/:id', canActivate: [authGuard], loadComponent: () => import('./features/squad/post').then(m => m.PostPage) },
   { path: 'notifications', canActivate: [authGuard], loadComponent: () => import('./features/notifications/notifications').then(m => m.NotificationsPage) },
   { path: 'invite/:code', canActivate: [rememberInviteGuard, authGuard], loadComponent: () => import('./features/squad/invite').then(m => m.InvitePage) },

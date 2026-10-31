@@ -155,4 +155,43 @@ describe('FeedCard', () => {
     const req = await vi.waitFor(() => http.expectOne(`${API_URL}/reports`));
     expect(req.request.body).toEqual({ targetType: 'USER', targetId: 'u2', reason: 'Harassment' });
   });
+
+  it('opens the same menu on a long press as on the More button', () => {
+    const { el, prompt } = render(post());
+    el.querySelector('.card')!.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+
+    expect(prompt.choice()?.options.map(o => o.label)).toEqual(['Report post', 'Report Mia Tran', 'Block Mia Tran']);
+  });
+
+  it('opens my own post menu on a long press', () => {
+    const { el, prompt } = render(post({ user: me }));
+    el.querySelector('.card')!.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+
+    expect(prompt.choice()?.options.map(o => o.key)).toEqual(['private', 'delete']);
+  });
+
+  it('hypes on a double tap but never un-hypes', async () => {
+    const tap = (target: Element) => {
+      for (const type of ['pointerdown', 'pointerup']) target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, clientX: 5, clientY: 5 }));
+    };
+    const { el, http, fixture } = render(post());
+    const body = el.querySelector('.card .text-mute.truncate')!;
+    tap(body);
+    tap(body);
+    http.expectOne(`${API_URL}/feed/f1/hype`).flush(post({ hypedByMe: true, hypeCount: 3 }));
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    tap(body);
+    tap(body);
+    http.expectNone(`${API_URL}/feed/f1/hype`);
+  });
+
+  it('labels the hype button and links the author to their profile', () => {
+    const { el, button } = render(post());
+
+    expect(button('Hype').textContent).toContain('Hype');
+    expect(button('Hype').textContent).toContain('2');
+    expect(el.querySelector('a')?.getAttribute('href')).toBe('/u/u2');
+  });
 });

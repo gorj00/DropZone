@@ -39,5 +39,10 @@ public interface ReportRepository extends JpaRepository<Report, UUID> {
 			nativeQuery = true)
 	int deleteCommentReportsOfPost(UUID feedItemId);
 
+	@Modifying
+	@Query(value = "delete from reports where target_type = 'COMMENT' and target_id in (select c.id from comments c where c.parent_id = :commentId)",
+			nativeQuery = true)
+	int deleteReplyReportsOf(UUID commentId);
+
 	List<Report> findByReporterIdOrderByCreatedAtAsc(UUID reporterId);
 }

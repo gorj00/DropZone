@@ -20,6 +20,9 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 @Service
 public class PushService {
 
+	public static final String TAG = "tag";
+	public static final String QUIET = "quiet";
+
 	private final PushSender sender;
 	private final UserRepository users;
 	private final PushTokenRepository tokens;

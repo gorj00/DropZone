@@ -158,6 +158,18 @@ class TestFakes {
 		@Override
 		public void deleteSubscriber(String appUserId) {
 		}
+
+		final List<String> cancelled = new CopyOnWriteArrayList<>();
+		volatile boolean failCancel;
+
+		@Override
+		public boolean cancelPlaySubscription(String appUserId, String storeTransactionId) {
+			if (failCancel) {
+				return false;
+			}
+			cancelled.add(appUserId + ":" + storeTransactionId);
+			return true;
+		}
 	}
 
 	static class FakePush implements PushSender {

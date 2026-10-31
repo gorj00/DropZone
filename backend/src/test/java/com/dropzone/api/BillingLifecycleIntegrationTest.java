@@ -13,6 +13,7 @@ import com.jayway.jsonpath.JsonPath;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -270,7 +271,7 @@ class BillingLifecycleIntegrationTest extends IntegrationTest {
 				.andExpect(jsonPath("$.trialEndPending").value(false)).andExpect(jsonPath("$.willRenew").value(false));
 		assertThat(notifications(user, "PRO_ENDED")).isEqualTo(1);
 		assertThat(pushes.to(user.id(), PushType.PRO_ENDED)).singleElement()
-				.satisfies(push -> assertThat(push.data()).containsEntry("link", "/paywall").containsEntry("type", "PRO_ENDED"));
+				.satisfies(push -> assertThat(push.data()).containsEntry("link", "/pro-ended").containsEntry("type", "PRO_ENDED"));
 
 		patch(user, "/api/v1/me", "{\"proEndAcknowledged\":true}").andExpect(jsonPath("$.proEndPending").value(false));
 		get(user, "/api/v1/me").andExpect(jsonPath("$.proEndPending").value(false));
@@ -389,6 +390,116 @@ class BillingLifecycleIntegrationTest extends IntegrationTest {
 				.andExpect(jsonPath("$.proExpiresAt").doesNotExist()).andExpect(jsonPath("$.billingHold").value(false))
 				.andExpect(jsonPath("$.proEndPending").value(false)).andExpect(jsonPath("$.trial").value(false));
 		assertThat(notifications(user, "PRO_ENDED")).isZero();
+		revenueCat.unavailable(user.id());
+	}
+
+	@Test
+	void aScheduledSwitchShowsUntilItHappensAndClearsWhenItDoes() throws Exception {
+		Session user = login("Switcher");
+		Instant renews = now().plus(200, ChronoUnit.DAYS).truncatedTo(ChronoUnit.SECONDS);
+		revenueCat.set(user.id(), new Entitlement(true, renews, "pro_yearly:yearly", true, null));
+		send("INITIAL_PURCHASE", user, now().minus(160, ChronoUnit.DAYS), renews);
+
+		post(user, "/api/v1/billing/pending-switch", "{\"productId\":\"pro_lifetime\"}").andExpect(status().isBadRequest());
+		post(user, "/api/v1/billing/pending-switch", "{\"productId\":\"pro_weekly\"}").andExpect(status().isOk())
+				.andExpect(jsonPath("$.pendingPlanId").value("pro_weekly")).andExpect(jsonPath("$.pendingPlanAt").value(renews.toString()));
+		get(user, "/api/v1/me").andExpect(jsonPath("$.pendingPlanId").value("pro_weekly")).andExpect(jsonPath("$.proProductId").value("pro_yearly:yearly"));
+
+		revenueCat.set(user.id(), new Entitlement(true, renews, "pro_yearly:yearly", false, null));
+		send("CANCELLATION", user, now(), renews);
+		get(user, "/api/v1/me").andExpect(jsonPath("$.pendingPlanId").value("pro_weekly")).andExpect(jsonPath("$.willRenew").value(false));
+
+		revenueCat.set(user.id(), new Entitlement(true, now().plus(7, ChronoUnit.DAYS), "pro_weekly:weekly", true, null));
+		send("PRODUCT_CHANGE", user, now(), now().plus(7, ChronoUnit.DAYS));
+		get(user, "/api/v1/me").andExpect(jsonPath("$.pendingPlanId").doesNotExist()).andExpect(jsonPath("$.proProductId").value("pro_weekly:weekly"));
+		assertThat(jdbc.queryForObject("select pending_product_id from users where id = ?", String.class, user.id())).isNull();
+		revenueCat.unavailable(user.id());
+	}
+
+	@Test
+	void aScheduledSwitchGoesAwayWhenItsDatePassesAndNeedsASubscriptionToStart() throws Exception {
+		Session none = login("NoSub");
+		post(none, "/api/v1/billing/pending-switch", "{\"productId\":\"pro_weekly\"}").andExpect(status().isConflict());
+
+		Session user = login("SwitchCancel");
+		Instant renews = now().plus(20, ChronoUnit.DAYS).truncatedTo(ChronoUnit.SECONDS);
+		revenueCat.set(user.id(), new Entitlement(true, renews, "pro_monthly:monthly", true, null));
+		send("INITIAL_PURCHASE", user, now().minus(10, ChronoUnit.DAYS), renews);
+		post(user, "/api/v1/billing/pending-switch", "{\"productId\":\"pro_weekly\"}").andExpect(jsonPath("$.pendingPlanId").value("pro_weekly"));
+
+		jdbc.update("update users set pending_switch_at = ? where id = ?", java.sql.Timestamp.from(now().minus(2, ChronoUnit.DAYS)), user.id());
+		Instant renewed = now().plus(30, ChronoUnit.DAYS);
+		revenueCat.set(user.id(), new Entitlement(true, renewed, "pro_monthly:monthly", true, null));
+		send("RENEWAL", user, now(), renewed);
+		get(user, "/api/v1/me").andExpect(jsonPath("$.pendingPlanId").doesNotExist()).andExpect(jsonPath("$.proProductId").value("pro_monthly:monthly"));
+		assertThat(jdbc.queryForObject("select pending_product_id from users where id = ?", String.class, user.id())).isNull();
+		revenueCat.unavailable(user.id());
+	}
+
+	@Test
+	void buyingUsesUpTheTrialSoItDoesNotComeBackWhenTheSubscriptionEnds() throws Exception {
+		Session user = login("TrialThenBuy");
+		jdbc.update("update users set trial_ends_at = ? where id = ?", Timestamp.from(now().plus(5, ChronoUnit.DAYS)), user.id());
+		get(user, "/api/v1/me").andExpect(jsonPath("$.trial").value(true)).andExpect(jsonPath("$.pro").value(true));
+
+		revenueCat.set(user.id(), new Entitlement(true, now().plus(30, ChronoUnit.DAYS), MONTHLY, true, null));
+		send("INITIAL_PURCHASE", user, now(), now().plus(30, ChronoUnit.DAYS));
+		get(user, "/api/v1/me").andExpect(jsonPath("$.trial").value(false)).andExpect(jsonPath("$.pro").value(true));
+
+		revenueCat.set(user.id(), Entitlement.none());
+		send("EXPIRATION", user, now(), now().minus(1, ChronoUnit.MINUTES));
+		get(user, "/api/v1/me").andExpect(jsonPath("$.trial").value(false)).andExpect(jsonPath("$.pro").value(false))
+				.andExpect(jsonPath("$.proEndPending").value(true));
+		assertThat(notifications(user, "PRO_ENDED")).isEqualTo(1);
+		revenueCat.unavailable(user.id());
+	}
+
+	private String lifetimeText(Session user) {
+		return jdbc.queryForObject("select text from notifications where user_id = ? and type = 'LIFETIME_PRO'", String.class, user.id());
+	}
+
+	@Test
+	void aLifetimeGrantCancelsTheRenewingPlaySubscriptionAndTellsTheUserOnce() throws Exception {
+		Session user = login("LifetimeSub");
+		String token = withToken(user);
+		revenueCat.set(user.id(), new Entitlement(true, null, "rc_promo_pro_lifetime", false, null, List.of("GPA.1111-2222")));
+		post(user, "/api/v1/billing/refresh", null).andExpect(jsonPath("$.pro").value(true));
+		post(user, "/api/v1/billing/refresh", null).andExpect(jsonPath("$.pro").value(true));
+
+		assertThat(revenueCat.cancelled).containsExactly(user.id() + ":GPA.1111-2222");
+		assertThat(notifications(user, "LIFETIME_PRO")).isEqualTo(1);
+		assertThat(lifetimeText(user)).isEqualTo("We cancelled your Google Play subscription, so you won't be charged again.");
+		assertThat(pushes.toToken(token)).singleElement().satisfies(push -> assertThat(push.type()).isEqualTo(PushType.LIFETIME_PRO));
+		revenueCat.unavailable(user.id());
+	}
+
+	@Test
+	void aLifetimeGrantWithoutASubscriptionOnlyCongratulates() throws Exception {
+		Session user = login("LifetimeFree");
+		revenueCat.set(user.id(), new Entitlement(true, null, "rc_promo_pro_lifetime", false, null));
+		send("NON_RENEWING_PURCHASE", user, now(), null);
+		assertThat(notifications(user, "LIFETIME_PRO")).isEqualTo(1);
+		assertThat(lifetimeText(user)).isEqualTo("Every PRO feature is yours, for good.");
+		assertThat(revenueCat.cancelled).noneMatch(c -> c.startsWith(user.id().toString()));
+		revenueCat.unavailable(user.id());
+	}
+
+	@Test
+	void aFailedCancelSendsNothingAndIsRetriedOnTheNextCheck() throws Exception {
+		Session user = login("LifetimeRetry");
+		revenueCat.set(user.id(), new Entitlement(true, null, "rc_promo_pro_lifetime", false, null, List.of("GPA.3333")));
+		revenueCat.failCancel = true;
+		try {
+			post(user, "/api/v1/billing/refresh", null).andExpect(jsonPath("$.pro").value(true));
+			assertThat(notifications(user, "LIFETIME_PRO")).isZero();
+			assertThat(jdbc.queryForObject("select lifetime_at from users where id = ?", Timestamp.class, user.id())).isNull();
+		}
+		finally {
+			revenueCat.failCancel = false;
+		}
+		post(user, "/api/v1/billing/refresh", null);
+		assertThat(revenueCat.cancelled).contains(user.id() + ":GPA.3333");
+		assertThat(notifications(user, "LIFETIME_PRO")).isEqualTo(1);
 		revenueCat.unavailable(user.id());
 	}
 }

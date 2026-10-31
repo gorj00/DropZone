@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:17
+    image: postgres:16
     environment:
       POSTGRES_DB: dropzone
       POSTGRES_USER: dropzone
@@ -8,7 +8,7 @@ services:
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - postgres16-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U dropzone -d dropzone"]
       interval: 5s
@@ -50,5 +50,5 @@ services:
       - "${API_PORT:-8080}:8080"
 
 volumes:
-  postgres-data:
+  postgres16-data:
   gcs-data:

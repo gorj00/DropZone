@@ -7,7 +7,7 @@ import {
   AdminReport, AdminUser, AppConfig, AppNotification, Page, Checkpoint, CheckpointPatch, DailyLogDetail, DayLogs, CheckpointSocial, CompleteQuestRequest, CustomQuestRequest, FeedComment, FeedItem,
   FeedScope, FriendRequest, Goal, GoalHistory, GoalPatch, HandleCheck, InviteResult, Leaderboard, Measurement, NewGoalRequest, OnboardingRequest, PastGoal, Period, PhotoResult, ProofView, QuestPatch, QuestSettings, QuestType,
   ReportedItem, ReportTarget, SlipUp, SlipUpType, Stats, Today, TodayQuest, Transformation, TransformationRequest, User, UserPatch,
-  UserQuest, UserSummary
+  UserProfile, UserQuest, UserSummary
 } from './models';
 import type { Region } from '../region';
 
@@ -68,6 +68,7 @@ export class ApiService {
   removePushToken(token: string) { return firstValueFrom(this.http.delete<void>(this.base + '/me/push-token', { body: { token } })); }
   setLockedApps(packages: string[]) { return this.put<User>('/me/locked-apps', { packages }); }
   refreshBilling() { return this.post<User>('/billing/refresh'); }
+  scheduleSwitch(productId: string) { return this.post<User>('/billing/pending-switch', { productId }); }
 
   onboard(req: OnboardingRequest) { return this.post<{ user: User; goal: Goal }>('/onboarding', req); }
 
@@ -119,6 +120,8 @@ export class ApiService {
   invite() { return this.get<{ code: string; url: string }>('/social/invite'); }
   acceptInvite(code: string) { return this.post<InviteResult>(`/social/invite/${code}/accept`); }
 
+  userProfile(id: string) { return this.get<UserProfile>(`/users/${id}/profile`); }
+  userFeed(id: string, cursor?: string, limit = 20) { return this.page<FeedItem>(`/users/${id}/feed`, { cursor, limit }); }
   feed(scope: FeedScope, cursor?: string, limit = 20) { return this.page<FeedItem>('/feed', { scope, cursor, limit }); }
   updateFeedItem(feedId: string, patch: { isPublic: boolean }) { return this.patch<FeedItem>(`/feed/${feedId}`, patch); }
   deleteFeedItem(feedId: string) { return this.delete<void>(`/feed/${feedId}`); }
@@ -130,7 +133,7 @@ export class ApiService {
   hype(feedId: string) { return this.post<FeedItem>(`/feed/${feedId}/hype`); }
   feedItem(feedId: string) { return this.get<FeedItem>(`/feed/${feedId}`); }
   comments(feedId: string) { return this.get<FeedComment[]>(`/feed/${feedId}/comments`); }
-  addComment(feedId: string, body: string) { return this.post<FeedComment>(`/feed/${feedId}/comments`, { body }); }
+  addComment(feedId: string, body: string, replyToId?: string) { return this.post<FeedComment>(`/feed/${feedId}/comments`, replyToId ? { body, replyToId } : { body }); }
   deleteComment(id: string) { return this.delete<void>(`/comments/${id}`); }
   likeComment(id: string) { return this.post<FeedComment>(`/comments/${id}/like`); }
   dayLogs(date: string) { return this.get<DayLogs>(`/logs?date=${date}`); }

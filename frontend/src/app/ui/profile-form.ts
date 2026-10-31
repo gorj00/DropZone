@@ -1,10 +1,10 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, model, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, model, signal } from '@angular/core';
 import { ApiService } from '../core/api/api.service';
 
 export const BIO_MAX = 150;
 const HANDLE_RE = /^[a-z0-9._]{3,20}$/;
 
-type HandleState = 'idle' | 'checking' | 'ok' | 'taken' | 'invalid' | 'error';
+type HandleState = 'idle' | 'saved' | 'checking' | 'ok' | 'taken' | 'invalid' | 'error';
 
 export function cleanHandle(raw: string): string {
   return raw.trim().toLowerCase().replace(/^@/, '');
@@ -46,11 +46,12 @@ export class ProfileForm {
   readonly name = model('');
   readonly handle = model('');
   readonly bio = model('');
+  readonly savedHandle = input<string | null | undefined>(null);
   protected readonly max = BIO_MAX;
   protected readonly handleState = signal<HandleState>('idle');
   private readonly hint = signal<string | null>(null);
 
-  readonly valid = computed(() => this.name().trim().length > 0 && this.handleState() === 'ok' && this.bio().length <= BIO_MAX);
+  readonly valid = computed(() => this.name().trim().length > 0 && (this.handleState() === 'ok' || this.handleState() === 'saved') && this.bio().length <= BIO_MAX);
   readonly checking = computed(() => this.handleState() === 'checking');
 
   protected readonly stateText = computed(() => {
@@ -80,6 +81,11 @@ export class ProfileForm {
     const seq = ++this.seq;
     if (!HANDLE_RE.test(handle)) {
       this.handleState.set(handle ? 'invalid' : 'idle');
+      this.hint.set(null);
+      return;
+    }
+    if (handle === this.savedHandle()) {
+      this.handleState.set('saved');
       this.hint.set(null);
       return;
     }

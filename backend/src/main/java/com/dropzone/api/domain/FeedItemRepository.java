@@ -27,6 +27,17 @@ public interface FeedItemRepository extends JpaRepository<FeedItem, UUID> {
 
 	@Query(value = """
 			select f.* from feed_items f
+			where f.user_id = :author and f.user_id not in (:hidden) and (f.hidden = false or f.user_id = :me)
+			and (f.is_public = true or f.user_id = :me or :friend = true)
+			and (f.user_id = :me or\s""" + PRO_AUTHOR + """
+			) and (f.created_at < :at or (f.created_at = :at and f.id < :id))
+			order by f.created_at desc, f.id desc limit :limit
+			""", nativeQuery = true)
+	List<FeedItem> authorPage(UUID me, UUID author, boolean friend, Collection<UUID> hidden, Instant now, Instant renewing, Instant at,
+			UUID id, int limit);
+
+	@Query(value = """
+			select f.* from feed_items f
 			where f.is_public = true and f.user_id not in (:hidden) and (f.hidden = false or f.user_id = :me)
 			and (f.user_id = :me or\s""" + PRO_AUTHOR + """
 			) and (f.created_at < :at or (f.created_at = :at and f.id < :id))

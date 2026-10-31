@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { Location, NgTemplateOutlet } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api/api.service';
 import { FriendRequest, UserSummary } from '../../core/api/models';
 import { shareOrCopy } from '../../core/native/share';
@@ -21,7 +21,7 @@ export function searchTerm(q: string): string {
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [NgTemplateOutlet, Avatar, ProTag, Icon, ProLock],
+  imports: [NgTemplateOutlet, RouterLink, Avatar, ProTag, Icon, ProLock],
   template: `
     <div class="screen pb-[calc(32px+env(safe-area-inset-bottom))]">
       <div class="pad h-[58px] flex items-center gap-3">
@@ -56,8 +56,8 @@ export function searchTerm(q: string): string {
             <div class="card mt-2 divide-y divide-line">
               @for (u of results(); track u.id) {
                 <div class="flex items-center gap-3 px-3.5 h-[58px]">
-                  <app-avatar [url]="u.avatarUrl" [name]="u.displayName" [size]="36" />
-                  <div class="flex-1 min-w-0"><div class="font-bold text-[14.5px] leading-tight truncate">{{ u.displayName }}</div><div class="text-[12px] text-mute truncate">&#64;{{ u.handle }}</div></div>
+                  <a class="flex items-center gap-3 flex-1 min-w-0" [routerLink]="['/u', u.id]"><app-avatar [url]="u.avatarUrl" [name]="u.displayName" [size]="36" />
+                  <div class="flex-1 min-w-0"><div class="font-bold text-[14.5px] leading-tight truncate">{{ u.displayName }}</div><div class="text-[12px] text-mute truncate">&#64;{{ u.handle }}</div></div></a>
                   @switch (relation(u)) {
                     @case ('me') { <span class="tag tag-plain">You</span> }
                     @case ('friend') { <span class="tag tag-free">Friend</span> }
@@ -81,8 +81,8 @@ export function searchTerm(q: string): string {
           <div class="card divide-y divide-line">
             @for (r of incoming(); track r.id) {
               <div class="flex items-center gap-3 px-3.5 h-[58px]">
-                <app-avatar [url]="r.from.avatarUrl" [name]="r.from.displayName" [size]="36" />
-                <div class="flex-1 min-w-0"><div class="font-bold text-[14.5px] leading-tight truncate">{{ r.from.displayName }}</div><div class="text-[12px] text-mute truncate">&#64;{{ r.from.handle }}</div></div>
+                <a class="flex items-center gap-3 flex-1 min-w-0" [routerLink]="['/u', r.from.id]"><app-avatar [url]="r.from.avatarUrl" [name]="r.from.displayName" [size]="36" />
+                <div class="flex-1 min-w-0"><div class="font-bold text-[14.5px] leading-tight truncate">{{ r.from.displayName }}</div><div class="text-[12px] text-mute truncate">&#64;{{ r.from.handle }}</div></div></a>
                 @if (pro()) {
                   <button class="qbtn" [disabled]="busy() === r.id" (click)="accept(r)"><app-icon name="check" />Accept</button>
                 } @else {
@@ -102,8 +102,8 @@ export function searchTerm(q: string): string {
           <div class="card divide-y divide-line">
             @for (r of outgoing(); track r.id) {
               <div class="flex items-center gap-3 px-3.5 h-[58px]">
-                <app-avatar [url]="r.to.avatarUrl" [name]="r.to.displayName" [size]="36" />
-                <div class="flex-1 min-w-0"><div class="font-bold text-[14.5px] leading-tight truncate">{{ r.to.displayName }}</div><div class="text-[12px] text-mute truncate">Waiting for accept</div></div>
+                <a class="flex items-center gap-3 flex-1 min-w-0" [routerLink]="['/u', r.to.id]"><app-avatar [url]="r.to.avatarUrl" [name]="r.to.displayName" [size]="36" />
+                <div class="flex-1 min-w-0"><div class="font-bold text-[14.5px] leading-tight truncate">{{ r.to.displayName }}</div><div class="text-[12px] text-mute truncate">Waiting for accept</div></div></a>
                 <button class="text-[12.5px] font-bold text-mute px-2" [disabled]="busy() === r.id" (click)="decline(r)">Cancel</button>
                 <ng-container *ngTemplateOutlet="more; context: { $implicit: r.to }" />
               </div>
@@ -121,11 +121,11 @@ export function searchTerm(q: string): string {
             <div class="card divide-y divide-line">
               @for (u of friends(); track u.id) {
                 <div class="flex items-center gap-3 px-3.5 h-[58px]">
-                  <app-avatar [url]="u.avatarUrl" [name]="u.displayName" [size]="36" />
+                  <a class="flex items-center gap-3 flex-1 min-w-0" [routerLink]="['/u', u.id]"><app-avatar [url]="u.avatarUrl" [name]="u.displayName" [size]="36" />
                   <div class="flex-1 min-w-0">
                     <div class="font-bold text-[14.5px] leading-tight truncate">{{ u.displayName }}</div>
                     <div class="text-[12px] text-mute truncate">&#64;{{ u.handle }}{{ u.path ? ' · ' + (u.path === 'GAIN' ? 'Building muscle' : 'Losing weight') : '' }}</div>
-                  </div>
+                  </div></a>
                   <button class="circ !w-8 !h-8 text-mute" [disabled]="busy() === u.id" (click)="remove(u)" aria-label="Remove friend"><app-icon name="trash" [size]="15" /></button>
                   <ng-container *ngTemplateOutlet="more; context: { $implicit: u }" />
                 </div>

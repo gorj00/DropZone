@@ -76,6 +76,24 @@ describe('CameraPage rep goal', () => {
     counter.click();
     expect(camera.finish).toHaveBeenCalledWith(expect.objectContaining({ reps: 10, exercise: 'PUSHUP' }));
   });
+
+  it('pulses the Go button until counting starts', async () => {
+    vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
+    vi.spyOn(HTMLVideoElement.prototype, 'videoWidth', 'get').mockReturnValue(640);
+    vi.spyOn(HTMLVideoElement.prototype, 'videoHeight', 'get').mockReturnValue(480);
+    const { fixture, el } = await render(20, () => Promise.resolve(stream));
+    const start = () => el.querySelector<HTMLButtonElement>('[aria-label="Start counting"]')!;
+    await vi.waitFor(() => {
+      fixture.detectChanges();
+      expect(start().disabled).toBe(false);
+    });
+    expect(start().classList).toContain('pulse');
+    expect(start().querySelector('.beat')!.textContent).toBe('Go');
+
+    start().click();
+    fixture.detectChanges();
+    expect(el.querySelector('[aria-label="Stop counting"]')!.classList).not.toContain('pulse');
+  });
 });
 
 describe('CameraPage AI check', () => {

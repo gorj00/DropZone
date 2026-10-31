@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api/api.service';
 import { isProRequired } from '../../core/api/errors';
 import { FeedItem } from '../../core/api/models';
@@ -12,6 +12,7 @@ import { UnitsService } from '../../core/units';
 import { Avatar } from '../../ui/bits';
 import { Badge } from '../../ui/badge';
 import { Icon } from '../../ui/icon';
+import { Press } from '../../ui/press';
 import { ReportedFlag } from '../../ui/reported-flag';
 import { TransformationViewer } from '../../ui/transformation-viewer';
 import { CommentsSheet } from './comments';
@@ -20,25 +21,30 @@ import { ago } from './in-view';
 @Component({
   selector: 'app-feed-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Avatar, Badge, Icon, TransformationViewer, CommentsSheet, ReportedFlag],
+  imports: [RouterLink, Avatar, Badge, Icon, Press, TransformationViewer, CommentsSheet, ReportedFlag],
+  styles: `
+    .burst { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; pointer-events: none; color: var(--accent); filter: drop-shadow(0 0 18px rgba(var(--accent-rgb), .8)); animation: burst .75s ease-out forwards; }
+    @keyframes burst { 0% { opacity: 0; transform: scale(.4); } 25% { opacity: 1; transform: scale(1.15); } 60% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.1); } }
+  `,
   template: `
     @let f = item();
     @if (f.type === 'CHECKPOINT_CLEARED') {
-      <div class="card-gold p-3 !rounded-[18px]">
+      <div class="card-gold p-3 !rounded-[18px] relative" appPress (longPress)="menu()" (doubleTap)="doubleHype()">
+        @if (burst()) { <span class="burst" aria-hidden="true"><app-icon name="bolt" [size]="72" /></span> }
         <div class="flex items-center gap-3">
           <div class="w-[54px] h-[54px] rounded-[12px] overflow-hidden flex-none grid place-items-center bg-s2">
             @if (f.photoUrl) { <img class="ph" [src]="f.photoUrl" alt="" loading="lazy"> } @else { <app-badge tone="gold" [size]="34" icon="trophy" /> }
           </div>
           <div class="flex-1 min-w-0">
             <div class="lbl flex items-center gap-1 !text-gold !text-[10px]"><app-icon name="trophy" [size]="12" /><span class="truncate">{{ f.title }}</span></div>
-            <div class="font-bold text-[14.5px] leading-tight mt-1 truncate">{{ f.user.displayName }}</div>
+            <a class="block font-bold text-[14.5px] leading-tight mt-1 truncate" [routerLink]="profileLink()">{{ f.user.displayName }}</a>
             <div class="text-[12px] text-mute truncate">{{ subtitle() }}</div>
           </div>
-          <button class="relative w-10 h-10 rounded-xl grid place-items-center flex-none text-gold border border-[rgba(var(--gold-rgb),.35)]"
+          <button class="relative h-10 px-3 rounded-xl flex items-center gap-1.5 flex-none text-gold border border-[rgba(var(--gold-rgb),.35)] font-bold text-[13px]"
             [style.background]="f.hypedByMe ? 'var(--gold-grad)' : 'rgba(var(--gold-rgb),.12)'" [style.color]="f.hypedByMe ? '#2a1a00' : null"
             [attr.aria-busy]="hyping()" (click)="hype()" aria-label="Hype">
-            <app-icon name="bolt" [size]="18" />
-            @if (f.hypeCount) { <span class="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-s3 text-ink text-[10px] font-bold grid place-items-center">{{ f.hypeCount }}</span> }
+            <app-icon name="bolt" [size]="18" />Hype
+            @if (f.hypeCount) { <span class="num">{{ f.hypeCount }}</span> }
           </button>
         </div>
         @if (reported()) {
@@ -51,11 +57,12 @@ import { ago } from './in-view';
         </div>
       </div>
     } @else {
-      <div class="card overflow-hidden">
+      <div class="card overflow-hidden relative" appPress (longPress)="menu()" (doubleTap)="doubleHype()">
+        @if (burst()) { <span class="burst" aria-hidden="true"><app-icon name="bolt" [size]="72" /></span> }
         <div class="flex items-center gap-2.5 px-3.5 h-[56px]">
-          <app-avatar [url]="f.user.avatarUrl" [name]="f.user.displayName" [size]="36" />
+          <a class="flex-none" [routerLink]="profileLink()" [attr.aria-label]="f.user.displayName"><app-avatar [url]="f.user.avatarUrl" [name]="f.user.displayName" [size]="36" /></a>
           <div class="flex-1 min-w-0">
-            <div class="font-bold text-[14.5px] leading-tight truncate">{{ f.user.displayName }}</div>
+            <a class="block font-bold text-[14.5px] leading-tight truncate" [routerLink]="profileLink()">{{ f.user.displayName }}</a>
             <div class="text-[12px] text-mute truncate">{{ f.title }} · {{ ago(f.createdAt) }}</div>
           </div>
           @if (f.verification?.canVerify && !f.verification?.verifiedByMe) {
@@ -93,8 +100,10 @@ import { ago } from './in-view';
           <button class="ml-auto flex items-center gap-1 num text-[15px] text-mute" (click)="openComments()" aria-label="Comments">
             <app-icon name="comment" [size]="16" />{{ f.commentCount }}
           </button>
-          <button class="flex items-center gap-1 num text-[15px] ml-2" [class.text-accent]="f.hypedByMe" [class.text-mute]="!f.hypedByMe" [attr.aria-busy]="hyping()" (click)="hype()" aria-label="Hype">
-            <span class="inline-flex text-accent"><app-icon name="bolt" [size]="16" /></span>{{ f.hypeCount }}
+          <button class="flex items-center gap-1 ml-2 h-[30px] px-2.5 rounded-full border text-[13px] font-bold" [class.text-accent]="f.hypedByMe" [class.text-mute]="!f.hypedByMe"
+                  [style.border-color]="f.hypedByMe ? 'rgba(var(--accent-rgb),.45)' : 'var(--line)'" [attr.aria-busy]="hyping()" [attr.aria-pressed]="f.hypedByMe" (click)="hype()" aria-label="Hype">
+            <span class="inline-flex text-accent"><app-icon name="bolt" [size]="15" /></span>Hype
+            @if (f.hypeCount) { <span class="num text-[15px]">{{ f.hypeCount }}</span> }
           </button>
         </div>
       </div>
@@ -122,10 +131,13 @@ export class FeedCard {
   readonly verified = output<void>();
 
   protected readonly ago = ago;
+  private burstTimer: ReturnType<typeof setTimeout> | undefined;
   protected readonly busy = signal(false);
   protected readonly hyping = signal(false);
   protected readonly commentsOpen = signal(false);
+  protected readonly burst = signal(false);
   protected readonly mine = computed(() => this.item().user.id === this.session.user()?.id);
+  protected readonly profileLink = computed(() => (this.mine() ? '/me' : ['/u', this.item().user.id]));
   protected readonly reported = computed(() => this.mine() && !!this.item().moderation);
   protected readonly commentLabel = computed(() => {
     const n = this.item().commentCount;
@@ -164,6 +176,14 @@ export class FeedCard {
     } finally {
       this.busy.set(false);
     }
+  }
+
+  protected doubleHype(): void {
+    this.burst.set(false);
+    setTimeout(() => this.burst.set(true));
+    clearTimeout(this.burstTimer);
+    this.burstTimer = setTimeout(() => this.burst.set(false), 800);
+    if (!this.item().hypedByMe) void this.hype();
   }
 
   protected async hype(): Promise<void> {

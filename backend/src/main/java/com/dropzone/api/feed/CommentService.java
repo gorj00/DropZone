@@ -16,7 +16,6 @@ import com.dropzone.api.domain.UserRepository;
 import com.dropzone.api.feed.FeedAccess.Viewer;
 import com.dropzone.api.moderation.BlockService;
 import com.dropzone.api.notification.NotificationService;
-import com.dropzone.api.push.PushService;
 import com.dropzone.api.push.PushType;
 import com.dropzone.api.user.UserService;
 import java.time.Clock;
@@ -43,12 +42,12 @@ public class CommentService {
 	private final UserService users;
 	private final FeedAccess access;
 	private final NotificationService notifications;
-	private final PushService push;
+	private final CommentPushes commentPushes;
 	private final BlockService blocks;
 	private final Clock clock;
 
 	public CommentService(CommentRepository comments, CommentLikeRepository likes, FeedItemRepository feed, ReportRepository reports,
-			UserRepository userRepository, UserService users, FeedAccess access, NotificationService notifications, PushService push,
+			UserRepository userRepository, UserService users, FeedAccess access, NotificationService notifications, CommentPushes commentPushes,
 			BlockService blocks, Clock clock) {
 		this.comments = comments;
 		this.likes = likes;
@@ -58,7 +57,7 @@ public class CommentService {
 		this.users = users;
 		this.access = access;
 		this.notifications = notifications;
-		this.push = push;
+		this.commentPushes = commentPushes;
 		this.blocks = blocks;
 		this.clock = clock;
 	}
@@ -122,7 +121,7 @@ public class CommentService {
 	}
 
 	@Transactional
-	public CommentDto add(UUID userId, UUID feedItemId, String body) {
+	public CommentDto add(UUID userId, UUID feedItemId, String body, UUID replyToId) {
 		User me = users.get(userId);
 		users.requirePro(me, "Comments");
 		FeedItem item = visibleItem(me, feedItemId);
@@ -130,19 +129,35 @@ public class CommentService {
 		if (text.isEmpty()) {
 			throw ApiException.validation("Write something first");
 		}
+		Comment replyTo = replyToId == null ? null : replyTarget(me, item, replyToId);
 		Comment comment = new Comment();
 		comment.id = UUID.randomUUID();
 		comment.feedItemId = item.id;
 		comment.userId = userId;
+		comment.parentId = replyTo == null ? null : replyTo.parentId != null ? replyTo.parentId : replyTo.id;
 		comment.body = text;
 		comment.createdAt = clock.instant();
 		comments.save(comment);
-		notifications.notify(item.userId, NotificationType.COMMENT, userId, item.id, item.proofId, comment.id, text);
-		if (!item.userId.equals(userId) && !blocks.blockedEitherWay(userId, item.userId)) {
-			push.notify(userRepository.findById(item.userId).orElse(null), PushType.COMMENT, me.displayName + " commented on your post",
-					preview(text), Map.of("feedItemId", item.id.toString(), "commentId", comment.id.toString()));
+		if (replyTo == null || !replyTo.userId.equals(item.userId)) {
+			notifications.notify(item.userId, NotificationType.COMMENT, userId, item.id, item.proofId, comment.id, text);
+			if (!item.userId.equals(userId) && !blocks.blockedEitherWay(userId, item.userId)) {
+				commentPushes.send(item.userId, me, item, comment.id, PushType.COMMENT, preview(text));
+			}
+		}
+		if (replyTo != null && !replyTo.userId.equals(userId) && !blocks.blockedEitherWay(userId, replyTo.userId)) {
+			notifications.notify(replyTo.userId, NotificationType.COMMENT_REPLY, userId, item.id, item.proofId, comment.id, text);
+			commentPushes.send(replyTo.userId, me, item, comment.id, PushType.COMMENT_REPLY, preview(text));
 		}
 		return toDto(comment, me, item, userId, 0, false);
+	}
+
+	private Comment replyTarget(User me, FeedItem item, UUID replyToId) {
+		Comment replyTo = comments.findById(replyToId).orElseThrow(() -> ApiException.notFound("Comment not found"));
+		boolean mine = replyTo.userId.equals(me.id);
+		if (!replyTo.feedItemId.equals(item.id) || (replyTo.hidden && !mine) || access.viewer(me).hiddenUsers().contains(replyTo.userId)) {
+			throw ApiException.notFound("Comment not found");
+		}
+		return replyTo;
 	}
 
 	@Transactional
@@ -154,6 +169,7 @@ public class CommentService {
 				throw ApiException.forbidden("You can only delete your own comments or comments on your posts");
 			}
 		}
+		reports.deleteReplyReportsOf(commentId);
 		reports.deleteByTargetTypeAndTargetId(ReportTarget.COMMENT, commentId);
 		comments.delete(comment);
 	}
@@ -174,6 +190,6 @@ public class CommentService {
 	private static CommentDto toDto(Comment comment, User author, FeedItem item, UUID me, int likeCount, boolean likedByMe) {
 		boolean mine = comment.userId.equals(me);
 		return new CommentDto(comment.id, comment.feedItemId, UserService.summary(author), comment.body, comment.createdAt, mine, likeCount,
-				likedByMe, mine || item.userId.equals(me));
+				likedByMe, mine || item.userId.equals(me), comment.parentId);
 	}
 }

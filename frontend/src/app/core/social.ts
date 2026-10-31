@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { ApiService } from './api/api.service';
 import { ReportTarget, UserSummary } from './api/models';
-import { PromptService } from './prompt.service';
+import { ChoiceOption, PromptService } from './prompt.service';
 import { SessionStore } from './session.store';
 import { ToastService } from './toast.service';
 
@@ -30,9 +30,10 @@ export class SocialActions {
   private readonly toast = inject(ToastService);
   private readonly session = inject(SessionStore);
 
-  async menu(target: Exclude<ReportTarget, 'USER'>, targetId: string, author: UserSummary): Promise<MenuResult> {
+  async menu(target: Exclude<ReportTarget, 'USER'>, targetId: string, author: UserSummary, extra: ChoiceOption[] = []): Promise<MenuResult | string> {
     const what = target === 'POST' ? 'post' : 'comment';
     const action = await this.prompt.choose(author.displayName, [
+      ...extra,
       { key: 'report', label: `Report ${what}`, icon: 'flag' },
       { key: 'user', label: `Report ${author.displayName}`, icon: 'user' },
       { key: 'block', label: `Block ${author.displayName}`, icon: 'block', danger: true }
@@ -40,7 +41,7 @@ export class SocialActions {
     if (action === 'report') return (await this.report(target, targetId)) ? 'reported' : null;
     if (action === 'user') return (await this.report('USER', author.id)) ? 'reported' : null;
     if (action === 'block') return (await this.block(author)) ? 'blocked' : null;
-    return null;
+    return action;
   }
 
   async userMenu(user: UserSummary): Promise<MenuResult> {

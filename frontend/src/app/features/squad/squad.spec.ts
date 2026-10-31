@@ -120,4 +120,28 @@ describe('SquadPage', () => {
 
     expect(el.textContent).toContain('Post a');
   });
+  it('reloads the feed in place when pulled down from the top', async () => {
+    let round = 0;
+    const { api, settle, el } = await render(() => Promise.resolve({ items: [item(round++ ? 'fresh' : 'old')], next: null }));
+    const touch = (type: string, y?: number) => {
+      const e = new Event(type, { bubbles: true });
+      Object.defineProperty(e, 'touches', { value: y === undefined ? [] : [{ clientY: y }] });
+      el.querySelector('.screen')!.dispatchEvent(e);
+    };
+    touch('touchstart', 100);
+    touch('touchmove', 140);
+    touch('touchend');
+    await settle();
+    expect(api.feed).toHaveBeenCalledTimes(1);
+
+    touch('touchstart', 100);
+    touch('touchmove', 260);
+    touch('touchend');
+    await settle();
+
+    expect(api.feed).toHaveBeenCalledTimes(2);
+    expect(api.feed.mock.calls[1][1]).toBeUndefined();
+    expect(el.textContent).toContain('Post fresh');
+    expect(el.textContent).not.toContain('Post old');
+  });
 });

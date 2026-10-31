@@ -1,3 +1,4 @@
+import { REP_CLIP_POINTS, REP_CLIPS } from './rep-clips.testdata';
 import { RepCounter, angle, parseWeight } from './vision';
 
 type Lm = { type: string; x: number; y: number; inFrameLikelihood: number };
@@ -87,39 +88,69 @@ describe('angle', () => {
   });
 });
 
+function hold(c: RepCounter, frame: Lm[], times = 3): number {
+  for (let i = 0; i < times; i++) c.feed(frame);
+  return c.count;
+}
+
 describe('RepCounter', () => {
   it('counts a squat after going down and back up', () => {
     const c = new RepCounter('SQUAT');
-    expect(c.feed(leg(175))).toBe(0);
-    expect(c.feed(leg(80))).toBe(0);
-    expect(c.feed(leg(170))).toBe(1);
+    expect(hold(c, leg(175))).toBe(0);
+    expect(hold(c, leg(80))).toBe(0);
+    expect(hold(c, leg(170))).toBe(1);
   });
 
-  it('does not count partial reps', () => {
+  it('counts a shallow front-view squat', () => {
     const c = new RepCounter('SQUAT');
-    c.feed(leg(175));
-    c.feed(leg(130));
-    expect(c.feed(leg(175))).toBe(0);
+    hold(c, leg(178));
+    hold(c, leg(125));
+    expect(hold(c, leg(176))).toBe(1);
+  });
+
+  it('does not count small bends', () => {
+    const c = new RepCounter('SQUAT');
+    hold(c, leg(175));
+    hold(c, leg(155));
+    expect(hold(c, leg(175))).toBe(0);
+  });
+
+  it('ignores a single glitchy frame', () => {
+    const c = new RepCounter('SQUAT');
+    hold(c, leg(175));
+    c.feed(leg(60));
+    expect(hold(c, leg(175))).toBe(0);
   });
 
   it('counts several reps', () => {
     const c = new RepCounter('SQUAT');
     for (let i = 0; i < 3; i++) {
-      c.feed(leg(90));
-      c.feed(leg(170));
+      hold(c, leg(90));
+      hold(c, leg(170));
     }
     expect(c.count).toBe(3);
   });
 
   it('ignores low-confidence landmarks', () => {
     const c = new RepCounter('SQUAT');
-    c.feed(leg(80, 0.3));
-    expect(c.feed(leg(170, 0.3))).toBe(0);
+    hold(c, leg(80, 0.3));
+    expect(hold(c, leg(170, 0.3))).toBe(0);
   });
 
-  it('uses the more confident side', () => {
+  it('follows the more bent side', () => {
     const c = new RepCounter('SQUAT');
-    c.feed([...leg(80, 0.95, 'LEFT'), ...leg(170, 0.6, 'RIGHT')]);
-    expect(c.feed([...leg(170, 0.95, 'LEFT'), ...leg(170, 0.6, 'RIGHT')])).toBe(1);
+    hold(c, [...leg(170, 0.95, 'LEFT'), ...leg(170, 0.95, 'RIGHT')]);
+    hold(c, [...leg(165, 0.95, 'LEFT'), ...leg(90, 0.95, 'RIGHT')]);
+    expect(hold(c, [...leg(170, 0.95, 'LEFT'), ...leg(170, 0.95, 'RIGHT')])).toBe(1);
   });
+
+  for (const clip of REP_CLIPS) {
+    it(`counts ${clip.reps} reps in video ${clip.name} (${clip.exercise})`, () => {
+      const c = new RepCounter(clip.exercise);
+      for (const f of clip.frames) {
+        c.feed(REP_CLIP_POINTS.map((type, i) => ({ type, x: f[i * 3], y: f[i * 3 + 1], inFrameLikelihood: f[i * 3 + 2] })).filter(() => f.length));
+      }
+      expect(c.count).toBe(clip.reps);
+    });
+  }
 });

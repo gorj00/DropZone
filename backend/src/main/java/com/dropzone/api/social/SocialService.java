@@ -6,6 +6,7 @@ import com.dropzone.api.common.Dtos.InviteDto;
 import com.dropzone.api.common.Dtos.InviteResultDto;
 import com.dropzone.api.common.Dtos.Relation;
 import com.dropzone.api.common.Dtos.RequestsDto;
+import com.dropzone.api.common.Dtos.UserProfileDto;
 import com.dropzone.api.common.Dtos.UserSummary;
 import com.dropzone.api.config.AppProperties;
 import com.dropzone.api.domain.FriendRequest;
@@ -97,6 +98,28 @@ public class SocialService {
 			return Relation.INCOMING;
 		}
 		return Relation.NONE;
+	}
+
+	@Transactional(readOnly = true)
+	public UserProfileDto profile(UUID userId, UUID otherId) {
+		User other = visibleUser(userService.get(userId), otherId);
+		Relation relation = relation(userId, other.id);
+		UUID requestId = switch (relation) {
+			case REQUESTED -> requests.findByFromUserIdAndToUserId(userId, other.id).map(r -> r.id).orElse(null);
+			case INCOMING -> requests.findByFromUserIdAndToUserId(other.id, userId).map(r -> r.id).orElse(null);
+			default -> null;
+		};
+		return new UserProfileDto(UserService.summary(other), relation, requestId);
+	}
+
+	@Transactional(readOnly = true)
+	public User visibleUser(User me, UUID otherId) {
+		if (me.id.equals(otherId)) {
+			return me;
+		}
+		userService.requirePro(me, "Feed");
+		return users.findById(otherId).filter(u -> !u.isSuspended() && !blocks.blockedEitherWay(me.id, u.id))
+				.orElseThrow(() -> ApiException.notFound("User not found"));
 	}
 
 	@Transactional(readOnly = true)

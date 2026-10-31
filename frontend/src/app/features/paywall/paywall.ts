@@ -92,12 +92,14 @@ export function mealRow(catalog: QuestType[], path: string): Row {
         @default {
           <div class="mx-5 mt-4 grid gap-2" [style.grid-template-columns]="'repeat(' + billing.plans().length + ', minmax(0, 1fr))'">
             @for (p of billing.plans(); track p.id) {
-              <button class="relative card px-2 py-3 text-center !rounded-[16px] transition-colors" (click)="selected.set(p.id)" [attr.aria-pressed]="selected() === p.id"
+              <button class="relative card px-2 py-3 text-center !rounded-[16px] transition-colors disabled:opacity-100" [disabled]="!!pending()" (click)="selected.set(p.id)" [attr.aria-pressed]="selected() === p.id"
                 [style.border]="selected() === p.id ? '1.5px solid var(--gold)' : null"
                 [style.background]="selected() === p.id ? selectedBg() : null"
                 [style.box-shadow]="selected() === p.id ? '0 0 24px -8px rgba(var(--gold-rgb),.6)' : null">
                 @if (p.id === current()) {
                   <span class="tag absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap !bg-ok !text-[var(--ok-ink)] !border-0">YOUR PLAN</span>
+                } @else if (p.id === pending()) {
+                  <span class="tag absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap !bg-accent2 !text-[#05202a] !border-0">NEXT</span>
                 } @else if (p.id === 'pro_yearly') {
                   <span class="tag absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap !bg-gold !text-[#2a1a00] !border-0">BEST VALUE</span>
                 }
@@ -115,13 +117,18 @@ export function mealRow(catalog: QuestType[], path: string): Row {
       }
 
       <div class="mt-auto pad pt-6">
+        @if (pendingNote(); as note) {
+          <p class="mb-3 text-center text-[12.5px] font-semibold text-accent2 leading-snug" data-test="pending-note">{{ note }}</p>
+        }
         @if (!buyable()) {
           <button class="btn btn-ghost" (click)="close()"><app-icon name="check" />You're PRO</button>
         } @else {
           @if (trialNote(); as note) {
             <p class="mb-3 text-center text-[12.5px] font-semibold text-gold leading-snug" data-test="trial-billing">{{ note }}</p>
           }
-          <button class="btn btn-gold" [disabled]="busy() || !plan()" (click)="buy()">{{ switching() ? 'Switch to ' + plan()!.label : 'Subscribe' }}</button>
+          <button class="btn btn-gold" [disabled]="busy() || !plan()" (click)="buy()">
+            @if (busy()) { <span class="spin" aria-hidden="true"></span>Confirming… } @else { {{ switching() ? 'Switch to ' + plan()!.label : 'Subscribe' }} }
+          </button>
           @if (plan(); as p) {
             <div class="mt-3 text-center text-[11.5px] text-mute leading-snug space-y-1" data-test="terms">
               <p><span class="text-ink font-semibold">{{ p.price }} per {{ p.period }}.</span> Renews automatically until you cancel.</p>
@@ -143,6 +150,14 @@ export function mealRow(catalog: QuestType[], path: string): Row {
         <button class="block mx-auto mt-2 text-[12.5px] font-semibold text-mute underline underline-offset-2" [disabled]="busy()" (click)="restore()">Restore purchases</button>
       </div>
     </div>
+    @if (busy()) {
+      <div class="fixed inset-0 z-50 grid place-items-center bg-[rgba(5,4,15,.72)] backdrop-blur-sm" role="status" data-test="busy">
+        <div class="flex flex-col items-center gap-3 text-center">
+          <span class="spin !w-10 !h-10 text-gold" aria-hidden="true"></span>
+          <span class="font-bold text-[15px]">Confirming with Google Play…</span>
+        </div>
+      </div>
+    }
   `
 })
 export class PaywallPage {
@@ -188,7 +203,15 @@ export class PaywallPage {
   protected readonly busy = signal(false);
   protected readonly plan = computed(() => this.billing.plans().find(p => p.id === this.selected()) ?? null);
   protected readonly switching = computed(() => !!this.current() && !!this.plan() && this.plan()!.id !== this.current());
-  protected readonly buyable = computed(() => !this.subscribed() || this.switching());
+  protected readonly pending = computed(() => (this.subscribed() ? planOf(this.session.user()?.pendingPlanId) : null));
+  protected readonly buyable = computed(() => !this.subscribed() || (this.switching() && !this.pending()));
+  protected readonly pendingNote = computed(() => {
+    const next = planLabel(this.session.user()?.pendingPlanId);
+    const at = this.session.user()?.pendingPlanAt;
+    if (!this.pending() || !next) return null;
+    const when = at ? new Date(at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
+    return `Your plan switches to ${next}${when ? ` on ${when}` : ''} when your ${this.currentLabel()} plan renews. To keep ${this.currentLabel()}, cancel the change in Google Play.`;
+  });
   protected readonly renewDate = computed(() => {
     const at = this.session.user()?.proExpiresAt;
     return at ? new Date(at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;

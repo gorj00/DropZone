@@ -14,14 +14,17 @@ public enum PushType {
 	BILLING_ISSUE(Channel.ACCOUNT),
 	PRO_ENDED(Channel.ACCOUNT),
 	PRO_BACK(Channel.ACCOUNT),
+	LIFETIME_PRO(Channel.ACCOUNT),
 	DEADLINE_REMINDER(Channel.REMINDERS),
 	ACCOUNT_DELETION(Channel.ACCOUNT),
 	COMMENT(Channel.COMMUNITY),
+	COMMENT_REPLY(Channel.COMMUNITY),
 	ACCOUNT_SUSPENDED(Channel.ACCOUNT);
 
 	public static final class Channel {
 		public static final String REMINDERS = "reminders";
 		public static final String COMMUNITY = "community";
+		public static final String COMMUNITY_QUIET = "community-quiet";
 		public static final String ACCOUNT = "account";
 
 		private Channel() {

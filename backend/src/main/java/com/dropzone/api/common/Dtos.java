@@ -41,7 +41,8 @@ public final class Dtos {
 			int bestStreak, String inviteCode, String timezone, boolean trial, Instant trialEndsAt, WeightUnit weightUnit,
 			LengthUnit lengthUnit, boolean admin, String bio, boolean trialEndPending, boolean consentRequired, boolean suspended,
 			boolean willRenew, String proProductId, boolean billingIssue, boolean proEndPending, boolean skipRestDays,
-			boolean hiddenFromSearch, boolean hiddenFromLeaderboards, boolean verifyRequestPushes, boolean shareStats, boolean billingHold) {
+			boolean hiddenFromSearch, boolean hiddenFromLeaderboards, boolean verifyRequestPushes, boolean commentPushes, boolean shareStats, boolean billingHold, String pendingPlanId,
+			Instant pendingPlanAt) {
 	}
 
 	public record PublicConfigDto(int minVersionCode, String termsVersion, String privacyVersion, String termsUrl, String privacyUrl,
@@ -134,7 +135,7 @@ public final class Dtos {
 	}
 
 	public record CommentDto(UUID id, UUID feedItemId, UserSummary user, String body, Instant createdAt, boolean mine, int likeCount,
-			boolean likedByMe, boolean canDelete) {
+			boolean likedByMe, boolean canDelete, UUID parentId) {
 	}
 
 	public record NotificationDto(UUID id, NotificationType type, UserSummary actor, UUID feedItemId, UUID proofId, UUID commentId,
@@ -186,6 +187,9 @@ public final class Dtos {
 	}
 
 	public record InviteResultDto(UserSummary user, Relation relation) {
+	}
+
+	public record UserProfileDto(UserSummary user, Relation relation, UUID requestId) {
 	}
 
 	public record InviteDto(String code, String url) {

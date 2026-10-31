@@ -135,15 +135,33 @@ public class FeedService {
 		authors.add(userId);
 		Instant now = clock.instant();
 		Instant renewing = now.minus(User.RENEWAL_LEEWAY);
-		Cursor from = Cursor.start(cursor, before, now);
+		return scanPages(viewer, Cursor.start(cursor, before, now), size, from -> switch (scope) {
+			case EVERYONE -> feed.everyonePage(userId, hidden, now, renewing, from.at(), from.id(), size);
+			case TO_VERIFY -> feed.toVerifyPage(userId, friends, hidden, now, renewing, from.at(), from.id(), size);
+			case FRIENDS -> feed.friendsPage(userId, authors, hidden, now, renewing, from.at(), from.id(), size);
+		});
+	}
+
+	@Transactional(readOnly = true)
+	public Paged<FeedItemDto> userFeed(UUID userId, UUID authorId, String cursor, Integer limit) {
+		User me = users.get(userId);
+		User author = social.visibleUser(me, authorId);
+		int size = limit == null ? 20 : Math.max(1, Math.min(MAX_LIMIT, limit));
+		Viewer viewer = access.viewer(me);
+		Set<UUID> hidden = withNobody(viewer.hiddenUsers());
+		boolean friend = viewer.friendIds().contains(author.id);
+		Instant now = clock.instant();
+		Instant renewing = now.minus(User.RENEWAL_LEEWAY);
+		return scanPages(viewer, Cursor.start(cursor, null, now), size,
+				from -> feed.authorPage(userId, author.id, friend, hidden, now, renewing, from.at(), from.id(), size));
+	}
+
+	private Paged<FeedItemDto> scanPages(Viewer viewer, Cursor start, int size, Function<Cursor, List<FeedItem>> pages) {
+		Cursor from = start;
 		List<FeedItem> visible = new ArrayList<>();
 		String next = null;
 		for (int scan = 0; scan < MAX_SCANS; scan++) {
-			List<FeedItem> page = switch (scope) {
-				case EVERYONE -> feed.everyonePage(userId, hidden, now, renewing, from.at(), from.id(), size);
-				case TO_VERIFY -> feed.toVerifyPage(userId, friends, hidden, now, renewing, from.at(), from.id(), size);
-				case FRIENDS -> feed.friendsPage(userId, authors, hidden, now, renewing, from.at(), from.id(), size);
-			};
+			List<FeedItem> page = pages.apply(from);
 			Set<UUID> allowed = access.filter(viewer, page).stream().map(i -> i.id).collect(Collectors.toSet());
 			for (FeedItem item : page) {
 				from = Cursor.after(item.createdAt, item.id);

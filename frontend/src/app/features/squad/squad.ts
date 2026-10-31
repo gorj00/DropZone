@@ -6,10 +6,12 @@ import { ApiService } from '../../core/api/api.service';
 import { FeedItem, FeedScope } from '../../core/api/models';
 import { PhotoLinks } from '../../core/photo-links';
 import { SessionStore } from '../../core/session.store';
+import { ToastService } from '../../core/toast.service';
 import { ProTag } from '../../ui/bits';
 import { NotificationBell } from '../../ui/bell';
 import { BottomNav } from '../../ui/bottom-nav';
 import { Icon } from '../../ui/icon';
+import { PULL_TRIGGER, PullRefresh } from '../../ui/pull-refresh';
 import { ProLock } from '../paywall/pro-lock';
 import { FeedCard } from './feed-card';
 import { InView } from './in-view';
@@ -21,10 +23,18 @@ const wantsToVerify = (p: ParamMap) => p.get('show') === 'verify';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, ProTag, BottomNav, Icon, ProLock, InView, LeaderboardSwiper, FeedCard, NotificationBell],
+  imports: [RouterLink, ProTag, BottomNav, Icon, ProLock, InView, PullRefresh, LeaderboardSwiper, FeedCard, NotificationBell],
   template: `
-    <div class="screen with-nav relative">
+    <div class="screen with-nav relative" appPullRefresh #pr="pull" [refreshing]="refreshing()" (appPullRefresh)="refresh()">
       @if (pro()) {
+        <div class="overflow-hidden grid place-items-center text-mute flex-none" [style.height.px]="refreshing() ? 52 : pr.distance()"
+             [style.transition]="pr.distance() ? 'none' : 'height .2s ease'" aria-hidden="true" data-test="pull">
+          @if (refreshing()) {
+            <span class="spin"></span>
+          } @else if (pr.distance()) {
+            <span class="inline-flex" [class.text-accent]="pr.distance() >= trigger" [style.transform]="'rotate(' + pr.distance() * 3 + 'deg)'"><app-icon name="refresh" [size]="20" /></span>
+          }
+        </div>
         <div class="pad pt-3 flex items-end justify-between gap-2">
           <div class="flex items-center gap-2"><div class="h text-[38px] [[data-theme=stealth]_&]:text-[42px]">Community</div><app-pro-tag /></div>
           <div class="flex items-center gap-2 mb-1">
@@ -112,6 +122,7 @@ const wantsToVerify = (p: ParamMap) => p.get('show') === 'verify';
 export class SquadPage {
   private readonly api = inject(ApiService);
   private readonly session = inject(SessionStore);
+  private readonly toast = inject(ToastService);
 
   protected readonly pro = this.session.pro;
   protected readonly scopes: { id: FeedScope; label: string; icon: string }[] = [
@@ -121,6 +132,8 @@ export class SquadPage {
   protected readonly scope = signal<FeedScope>('FRIENDS');
   protected readonly items = signal<FeedItem[]>([]);
   protected readonly loading = signal(false);
+  protected readonly refreshing = signal(false);
+  protected readonly trigger = PULL_TRIGGER;
   protected readonly failed = signal(false);
   protected readonly done = signal(false);
   protected readonly pending = signal(0);
@@ -167,6 +180,26 @@ export class SquadPage {
   protected toggleToVerify(): void {
     this.setScope(this.scope() === 'TO_VERIFY' ? 'FRIENDS' : 'TO_VERIFY');
     if (this.scope() === 'TO_VERIFY') this.loadPending();
+  }
+
+  protected async refresh(): Promise<void> {
+    if (!this.pro() || this.refreshing()) return;
+    const scope = this.scope();
+    this.refreshing.set(true);
+    try {
+      const page = await this.api.feed(scope, undefined, PAGE);
+      if (scope !== this.scope()) return;
+      this.items.set(page.items);
+      this.next = page.next;
+      this.done.set(!page.next);
+      this.failed.set(false);
+      this.loadPending();
+      void this.api.friendRequests().then(r => this.incoming.set(r.incoming.length)).catch(() => undefined);
+    } catch (e) {
+      this.toast.error(e);
+    } finally {
+      this.refreshing.set(false);
+    }
   }
 
   protected more(): void {
