@@ -23,7 +23,7 @@ function NewSecret([string] $name, [string] $value) {
     if (Exists { gcloud secrets describe $name --project $Project }) { Write-Host "secret $name exists"; return }
     $file = New-TemporaryFile
     [IO.File]::WriteAllText($file.FullName, $value)
-    gcloud secrets create $name --project $Project --replication-policy automatic --labels app=dropzone,env=prod --data-file $file.FullName
+    gcloud secrets create $name --project $Project --replication-policy automatic --labels 'app=dropzone,env=prod' --data-file $file.FullName
     Remove-Item $file.FullName
 }
 
@@ -40,7 +40,12 @@ if (-not (Exists { gcloud sql databases describe dropzone_prod --instance $Insta
 }
 if (-not (Exists { gcloud secrets describe prod-dropzone-db-password --project $Project })) {
     $password = RandomHex 24
-    gcloud sql users create dropzone_prod --instance $Instance --project $Project --password $password
+    if ((gcloud sql users list --instance $Instance --project $Project --format 'value(name)') -contains 'dropzone_prod') {
+        gcloud sql users set-password dropzone_prod --instance $Instance --project $Project --password $password
+    }
+    else {
+        gcloud sql users create dropzone_prod --instance $Instance --project $Project --password $password
+    }
     NewSecret 'prod-dropzone-db-password' $password
 }
 NewSecret 'prod-dropzone-jwt-secret' (RandomHex 48)
@@ -52,7 +57,7 @@ if (-not (Exists { gcloud storage buckets describe "gs://$Bucket" --project $Pro
     gcloud storage buckets create "gs://$Bucket" --project $Project --location $Region --uniform-bucket-level-access --public-access-prevention --soft-delete-duration 0
 }
 if (Exists { gcloud storage buckets describe "gs://$Bucket" --project $Project }) {
-    gcloud storage buckets update "gs://$Bucket" --project $Project --update-labels app=dropzone,env=prod --format none
+    gcloud storage buckets update "gs://$Bucket" --project $Project --update-labels 'app=dropzone,env=prod' --format none
 }
 
 gcloud projects add-iam-policy-binding $Project --member "serviceAccount:$Runtime" --role roles/cloudsql.client --format none
