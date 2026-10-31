@@ -116,6 +116,9 @@ public class AppLockService extends AccessibilityService {
         if (!packageName.equals(getPackageName()) && isTransient(packageName)) {
             return;
         }
+        if (overlay != null && packageName.equals(getPackageName()) && overlay.getClass().getName().equals(String.valueOf(event.getClassName()))) {
+            return;
+        }
         foregroundPackage = packageName;
         evaluate();
     }

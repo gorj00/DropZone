@@ -12,6 +12,8 @@ import android.os.Looper;
 import android.os.PowerManager;
 import android.view.accessibility.AccessibilityEvent;
 
+import com.dropzone.app.MainActivity;
+
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -51,8 +53,13 @@ public class AppLockServiceTest {
     }
 
     private void open(String packageName) {
+        open(packageName, null);
+    }
+
+    private void open(String packageName, String className) {
         AccessibilityEvent event = new AccessibilityEvent(AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED);
         event.setPackageName(packageName);
+        event.setClassName(className);
         service.onAccessibilityEvent(event);
         idle(Duration.ZERO);
     }
@@ -88,7 +95,18 @@ public class AppLockServiceTest {
         open(INSTAGRAM);
         assertTrue(sentHome());
         assertTrue(overlayShown());
-        open(context.getPackageName());
+        open(context.getPackageName(), MainActivity.class.getName());
+        assertFalse(overlayShown());
+    }
+
+    @Test
+    public void theLockWindowItselfDoesNotHideTheOverlay() {
+        configure(0);
+        start();
+        open(INSTAGRAM);
+        open(context.getPackageName(), "android.widget.FrameLayout");
+        assertTrue(overlayShown());
+        open(context.getPackageName(), MainActivity.class.getName());
         assertFalse(overlayShown());
     }
 
