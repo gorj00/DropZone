@@ -62,6 +62,10 @@ public class CapacityFilter extends OncePerRequestFilter {
 		return databaseWaits.lastWindow();
 	}
 
+	public int inFlight() {
+		return inFlight.get();
+	}
+
 	private static IntSupplier waiting(DataSource dataSource) {
 		if (!(dataSource instanceof HikariDataSource hikari)) {
 			return () -> 0;

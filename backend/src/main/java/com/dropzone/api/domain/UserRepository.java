@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -16,6 +17,9 @@ import org.springframework.data.jpa.repository.Query;
 public interface UserRepository extends JpaRepository<User, UUID> {
 
 	Optional<User> findByEmail(String email);
+
+	@Query("select u from User u where lower(u.email) like :pattern or lower(u.handle) like :pattern or lower(u.displayName) like :pattern")
+	Page<User> adminSearch(String pattern, Pageable pageable);
 
 	boolean existsByEmailAndIdNot(String email, UUID id);
 

@@ -1,5 +1,6 @@
 package com.dropzone.api.common;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,6 +9,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -27,9 +31,11 @@ public class GlobalExceptionHandler {
 	private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
 	private final ServerErrors errors;
+	private final ServerErrorLog errorLog;
 
-	public GlobalExceptionHandler(ServerErrors errors) {
+	public GlobalExceptionHandler(ServerErrors errors, ServerErrorLog errorLog) {
 		this.errors = errors;
+		this.errorLog = errorLog;
 	}
 
 	@ExceptionHandler(ApiException.class)
@@ -92,8 +98,11 @@ public class GlobalExceptionHandler {
 	}
 
 	@ExceptionHandler(Exception.class)
-	ResponseEntity<ErrorResponse> unexpected(Exception e) {
+	ResponseEntity<ErrorResponse> unexpected(Exception e, HttpServletRequest request) {
 		errors.record();
+		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+		errorLog.record(request.getMethod(), request.getRequestURI(), e,
+				auth != null && auth.getPrincipal() instanceof Jwt jwt ? jwt.getSubject() : null);
 		log.error("Unexpected error", e);
 		return build(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL", "Unexpected error");
 	}

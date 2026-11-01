@@ -17,4 +17,6 @@ public interface QuestCompletionRepository extends JpaRepository<QuestCompletion
 	Optional<QuestCompletion> findByProofId(UUID proofId);
 
 	List<QuestCompletion> findByUserIdOrderByDayAscCreatedAtAsc(UUID userId);
+
+	List<QuestCompletion> findByUserIdAndDayBetweenOrderByCreatedAtAsc(UUID userId, LocalDate from, LocalDate to);
 }

@@ -38,6 +38,7 @@ services:
       DB_PASSWORD: dropzone
       JWT_SECRET: ${JWT_SECRET:-local-dev-secret-change-me-0123456789abcdef}
       GOOGLE_CLIENT_IDS: ${GOOGLE_CLIENT_IDS:-}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
       GCS_BUCKET: dropzone-local
       GCS_ENDPOINT: http://gcs:4443
       GCS_PUBLIC_BASE_URL: http://localhost:4443/dropzone-local

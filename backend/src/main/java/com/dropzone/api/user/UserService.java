@@ -89,9 +89,13 @@ public class UserService {
 	}
 
 	public boolean isAdmin(User user) {
+		return user.googleSub != null && isAdminEmail(user.email);
+	}
+
+	public boolean isAdminEmail(String email) {
 		List<String> admins = props.adminEmails();
-		return admins != null && user.email != null && user.googleSub != null
-				&& admins.stream().map(String::trim).anyMatch(e -> !e.isEmpty() && e.equalsIgnoreCase(user.email));
+		return admins != null && email != null
+				&& admins.stream().map(String::trim).anyMatch(e -> !e.isEmpty() && e.equalsIgnoreCase(email.trim()));
 	}
 
 	public void requireAdmin(User user) {

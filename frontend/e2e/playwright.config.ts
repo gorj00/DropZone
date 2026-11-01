@@ -17,7 +17,7 @@ export default defineConfig({
     trace: 'retain-on-failure'
   },
   webServer: {
-    command: `npx ng serve --port ${port}`,
+    command: `npx ng serve dropzone --port ${port}`,
     cwd: '..',
     url: `http://localhost:${port}`,
     reuseExistingServer: process.env['E2E_REUSE'] === '1',

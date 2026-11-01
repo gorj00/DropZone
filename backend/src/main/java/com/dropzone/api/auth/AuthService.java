@@ -33,7 +33,24 @@ public class AuthService {
 
 	@Transactional
 	public AuthResponse google(String idToken) {
+		return google(googleVerifier.verify(idToken));
+	}
+
+	@Transactional
+	public AuthResponse admin(String idToken) {
 		GoogleTokenVerifier.GoogleIdentity identity = googleVerifier.verify(idToken);
+		if (identity.email() == null || !identity.emailVerified() || !userService.isAdminEmail(identity.email())) {
+			log.warn("Backoffice sign-in refused: the Google account is not an admin");
+			throw ApiException.forbidden("This Google account can't open the backoffice");
+		}
+		AuthResponse response = google(identity);
+		if (!response.user().admin()) {
+			throw ApiException.forbidden("This Google account can't open the backoffice");
+		}
+		return response;
+	}
+
+	private AuthResponse google(GoogleTokenVerifier.GoogleIdentity identity) {
 		if (identity.subject() == null || identity.subject().isBlank()) {
 			throw ApiException.unauthorized("Invalid Google token");
 		}

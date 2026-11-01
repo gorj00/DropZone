@@ -354,6 +354,11 @@ public class ModerationService {
 		}
 	}
 
+	@Transactional(readOnly = true)
+	public List<ReportEntryDto> reportsAbout(UUID userId) {
+		return entries(reports.findAboutUser(userId));
+	}
+
 	private AdminUserDto adminUser(User user) {
 		return new AdminUserDto(UserService.summary(user), user.email, user.createdAt, user.isSuspended(), user.suspendedAt,
 				user.moderationStrikes, entries(reports.findAboutUser(user.id)));

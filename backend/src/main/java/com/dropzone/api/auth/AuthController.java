@@ -23,6 +23,11 @@ public class AuthController {
 		return authService.google(req.idToken());
 	}
 
+	@PostMapping("/admin")
+	AuthResponse admin(@Valid @RequestBody Requests.GoogleAuth req) {
+		return authService.admin(req.idToken());
+	}
+
 	@PostMapping("/dev")
 	AuthResponse dev(@Valid @RequestBody Requests.DevAuth req) {
 		return authService.dev(req.email(), req.displayName());
