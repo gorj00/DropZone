@@ -7,6 +7,7 @@ import type {
 } from './models';
 
 export const API_URL = environment.apiUrl;
+export const SHOW_SANDBOX = !environment.production;
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -34,13 +35,13 @@ export class ApiService {
     return { user: res.body as User, token: res.headers.get('X-Auth-Token') };
   }
 
-  overview() { return this.get<Overview>('/admin/overview'); }
+  overview(sandbox = SHOW_SANDBOX) { return this.get<Overview>('/admin/overview', { sandbox: String(sandbox) }); }
   jobs() { return this.get<JobView[]>('/admin/jobs'); }
   users(q: string, page = 0, size = 50) { return this.get<UserPage>('/admin/users', { q, page, size }); }
   account(id: string) { return this.get<Account>(`/admin/users/${id}/account`); }
   days(id: string, from?: string, to?: string) { return this.get<DayView[]>(`/admin/users/${id}/days`, { from, to }); }
   errors(limit = 100) { return this.get<ErrorView[]>('/admin/errors', { limit }); }
-  billingEvents(limit = 100) { return this.get<BillingEventView[]>('/admin/billing-events', { limit }); }
+  billingEvents(limit = 100, sandbox = SHOW_SANDBOX) { return this.get<BillingEventView[]>('/admin/billing-events', { limit, sandbox: String(sandbox) }); }
 
   reportedItems() { return this.get<ReportedItem[]>('/admin/reports'); }
   adminReport(type: ReportTarget, id: string) { return this.get<AdminReport>(`/admin/reports/${type}/${id}`); }

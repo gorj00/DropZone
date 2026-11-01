@@ -29,8 +29,8 @@ public class AdminController {
 	}
 
 	@GetMapping("/overview")
-	Overview overview(@CurrentUser UUID userId) {
-		return admin.overview(userId);
+	Overview overview(@CurrentUser UUID userId, @RequestParam(defaultValue = "true") boolean sandbox) {
+		return admin.overview(userId, sandbox);
 	}
 
 	@GetMapping("/jobs")
@@ -62,7 +62,8 @@ public class AdminController {
 	}
 
 	@GetMapping("/billing-events")
-	List<BillingEventView> billingEvents(@CurrentUser UUID userId, @RequestParam(defaultValue = "100") int limit) {
-		return admin.billingEvents(userId, limit);
+	List<BillingEventView> billingEvents(@CurrentUser UUID userId, @RequestParam(defaultValue = "100") int limit,
+			@RequestParam(defaultValue = "true") boolean sandbox) {
+		return admin.billingEvents(userId, limit, sandbox);
 	}
 }

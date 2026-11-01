@@ -119,12 +119,21 @@ class AdminIntegrationTest extends IntegrationTest {
 				.andExpect(jsonPath("$[0].email").value("moderator@test.dev"));
 
 		String eventId = "evt-" + UUID.randomUUID();
+		String liveId = "evt-" + UUID.randomUUID();
 		jdbc.update("insert into billing_events (id, type, app_user_id, environment, received_at) values (?, 'RENEWAL', ?, 'SANDBOX', now())",
 				eventId, admin.id().toString());
+		jdbc.update("insert into billing_events (id, type, app_user_id, environment, received_at) values (?, 'CANCELLATION', ?, 'PRODUCTION', now() - interval '1 minute')",
+				liveId, admin.id().toString());
 		get(admin, "/api/v1/admin/billing-events?limit=5").andExpect(status().isOk())
 				.andExpect(jsonPath("$[0].id").value(eventId))
 				.andExpect(jsonPath("$[0].type").value("RENEWAL"))
-				.andExpect(jsonPath("$[0].email").value("moderator@test.dev"));
+				.andExpect(jsonPath("$[0].email").value("moderator@test.dev"))
+				.andExpect(jsonPath("$[1].id").value(liveId));
+		get(admin, "/api/v1/admin/billing-events?limit=5&sandbox=false").andExpect(status().isOk())
+				.andExpect(jsonPath("$[0].id").value(liveId))
+				.andExpect(jsonPath("$[?(@.environment=='SANDBOX')]").isEmpty());
+		get(admin, "/api/v1/admin/overview?sandbox=false").andExpect(status().isOk())
+				.andExpect(jsonPath("$.billingEvents[?(@.environment=='SANDBOX')]").isEmpty());
 	}
 
 	private long userCount() {

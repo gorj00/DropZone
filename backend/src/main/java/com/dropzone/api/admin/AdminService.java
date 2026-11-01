@@ -157,12 +157,12 @@ public class AdminService {
 	}
 
 	@Transactional(readOnly = true)
-	public Overview overview(UUID adminId) {
+	public Overview overview(UUID adminId, boolean sandbox) {
 		requireAdmin(adminId);
 		Instant now = clock.instant();
 		List<JobView> jobList = jobs();
 		return new Overview(totals(now), signups(now), jobList, jobList.stream().filter(j -> j.failedAt() != null).count(), health(),
-				openReports(), errorRepository.countByAtGreaterThanEqual(now.minus(DAY)), billingEvents(10));
+				openReports(), errorRepository.countByAtGreaterThanEqual(now.minus(DAY)), billingEvents(10, sandbox));
 	}
 
 	@Transactional(readOnly = true)
@@ -276,13 +276,13 @@ public class AdminService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<BillingEventView> billingEvents(UUID adminId, int limit) {
+	public List<BillingEventView> billingEvents(UUID adminId, int limit, boolean sandbox) {
 		requireAdmin(adminId);
-		return billingEvents(Math.clamp(limit, 1, MAX_LIST));
+		return billingEvents(Math.clamp(limit, 1, MAX_LIST), sandbox);
 	}
 
-	private List<BillingEventView> billingEvents(int limit) {
-		List<BillingEvent> list = billingEvents.findAllByOrderByReceivedAtDesc(PageRequest.of(0, limit));
+	private List<BillingEventView> billingEvents(int limit, boolean sandbox) {
+		List<BillingEvent> list = billingEvents.findLatest(sandbox, PageRequest.of(0, limit));
 		Map<UUID, String> emails = emails(list.stream().map(e -> parse(e.appUserId)).filter(Objects::nonNull).toList());
 		return list.stream().map(e -> new BillingEventView(e.id, e.type, e.appUserId, emails.get(parse(e.appUserId)), e.environment,
 				e.receivedAt)).toList();

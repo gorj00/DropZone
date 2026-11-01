@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { ApiService } from '../core/api';
+import { ApiService, SHOW_SANDBOX } from '../core/api';
 import { ago, when } from '../core/format';
 import type { BillingEventView } from '../core/models';
 import { Toast } from '../core/toast';
@@ -12,9 +12,12 @@ import { Empty, Loading } from '../ui/bits';
   template: `
     <div class="flex items-center gap-4">
       <h1 class="h text-[30px] flex-1">Billing events</h1>
+      <label class="flex items-center gap-2 text-[15px] font-semibold cursor-pointer">
+        <input type="checkbox" class="w-4 h-4 accent-accent" [checked]="sandbox()" (change)="toggleSandbox($event)">Show test (sandbox) events
+      </label>
       <button class="btn btn-ghost btn-sm" (click)="load()" [disabled]="loading()">Refresh</button>
     </div>
-    <p class="text-[15px] text-mute mt-2">RevenueCat webhook events as received, newest first. Each event id is applied once.</p>
+    <p class="text-[15px] text-mute mt-2">RevenueCat webhook events as received, newest first. Each event id is applied once.{{ sandbox() ? '' : ' Sandbox (test purchase) events are hidden.' }}</p>
 
     @if (events(); as list) {
       @if (list.length) {
@@ -48,6 +51,7 @@ export class BillingPage implements OnInit {
 
   protected readonly events = signal<BillingEventView[] | null>(null);
   protected readonly loading = signal(true);
+  protected readonly sandbox = signal(SHOW_SANDBOX);
   protected readonly ago = ago;
   protected readonly when = when;
 
@@ -55,10 +59,15 @@ export class BillingPage implements OnInit {
     void this.load();
   }
 
+  protected toggleSandbox(event: Event): void {
+    this.sandbox.set((event.target as HTMLInputElement).checked);
+    void this.load();
+  }
+
   protected async load(): Promise<void> {
     this.loading.set(true);
     try {
-      this.events.set(await this.api.billingEvents(200));
+      this.events.set(await this.api.billingEvents(200, this.sandbox()));
     } catch (e) {
       this.toast.error(e);
     } finally {

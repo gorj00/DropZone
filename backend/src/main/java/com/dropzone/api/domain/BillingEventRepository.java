@@ -16,5 +16,6 @@ public interface BillingEventRepository extends JpaRepository<BillingEvent, Stri
 			""", nativeQuery = true)
 	int record(String id, String type, String appUserId, String environment, Instant now);
 
-	List<BillingEvent> findAllByOrderByReceivedAtDesc(Pageable pageable);
+	@Query("select e from BillingEvent e where :sandbox = true or e.environment is null or upper(e.environment) <> 'SANDBOX' order by e.receivedAt desc")
+	List<BillingEvent> findLatest(boolean sandbox, Pageable pageable);
 }
