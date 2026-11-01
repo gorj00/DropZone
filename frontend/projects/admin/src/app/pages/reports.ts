@@ -40,7 +40,7 @@ export function removeQuestion(type: ReportTarget): string {
                   <td>
                     <div class="flex items-start gap-3">
                       @if (r.photoUrl) { <img class="photo" [src]="r.photoUrl" alt=""> }
-                      <div class="min-w-0"><span class="tag tag-plain">{{ names[r.targetType] }}</span><p class="mt-1 text-[13px] break-words max-w-[420px]">{{ r.preview }}</p></div>
+                      <div class="min-w-0"><span class="tag tag-plain">{{ names[r.targetType] }}</span><p class="mt-1 text-[15px] break-words max-w-[420px]">{{ r.preview }}</p></div>
                     </div>
                   </td>
                   <td>

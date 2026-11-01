@@ -23,7 +23,7 @@ import { Session } from './core/session';
           <a class="navlink" routerLink="/billing" routerLinkActive="on">Billing</a>
         </nav>
         <div class="mt-auto px-2 pt-6 border-t border-line">
-          <div class="text-[12.5px] text-mute truncate" [title]="session.user()?.email">{{ session.user()?.email }}</div>
+          <div class="text-[15px] text-mute truncate" [title]="session.user()?.email">{{ session.user()?.email }}</div>
           <button class="btn btn-ghost btn-sm mt-3 w-full" (click)="session.signOut()">Sign out</button>
         </div>
       </aside>

@@ -19,7 +19,7 @@ export function rangeFrom(days: number, today = new Date()): string {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, Avatar, PlanTag, Loading],
   template: `
-    <a routerLink="/users" class="text-[12.5px] text-accent2 font-semibold">← Users</a>
+    <a routerLink="/users" class="text-[15px] text-accent2 font-semibold">← Users</a>
 
     @if (missing()) {
       <div class="card p-8 mt-4 text-center"><div class="h text-[24px]">User not found</div><p class="text-mute mt-2">The account may have been deleted.</p></div>
@@ -93,13 +93,13 @@ export function rangeFrom(days: number, today = new Date()): string {
           <div class="lbl mt-5">Reports about this user · {{ a.reports.length }}</div>
           <div class="mt-2 divide-y divide-line">
             @for (r of a.reports; track $index) {
-              <a class="flex items-center gap-3 py-2 text-[13px]" [routerLink]="['/reports', r.targetType, r.targetId]">
+              <a class="flex items-center gap-3 py-2 text-[15px]" [routerLink]="['/reports', r.targetType, r.targetId]">
                 <span class="tag tag-plain">{{ r.targetType }}</span>
                 <span class="flex-1 truncate">{{ r.reason ?? 'No reason' }}<span class="text-mute"> · by {{ r.reporter?.displayName ?? 'image check' }}</span></span>
                 <span class="text-mute whitespace-nowrap">{{ ago(r.createdAt) }}</span>
               </a>
             } @empty {
-              <div class="py-2 text-[13px] text-mute">None.</div>
+              <div class="py-2 text-[15px] text-mute">None.</div>
             }
           </div>
         </div>
@@ -133,7 +133,7 @@ export function rangeFrom(days: number, today = new Date()): string {
               </table>
             </div>
           } @empty {
-            <div class="mt-2 text-[13px] text-mute">No goal yet.</div>
+            <div class="mt-2 text-[15px] text-mute">No goal yet.</div>
           }
         </div>
 
@@ -144,7 +144,7 @@ export function rangeFrom(days: number, today = new Date()): string {
             <tbody>
               @for (q of a.quests; track q.id) {
                 <tr [class.opacity-50]="!q.active">
-                  <td><div class="font-bold">{{ q.name }}</div><div class="text-[12px] text-mute">{{ q.code ?? 'custom' }} · {{ q.group }}</div></td>
+                  <td><div class="font-bold">{{ q.name }}</div><div class="text-[15px] text-mute">{{ q.code ?? 'custom' }} · {{ q.group }}</div></td>
                   <td class="text-mute">{{ q.proof }}</td>
                   <td class="text-mute">{{ q.days.length === 7 ? 'every day' : q.days.join(' ') }}</td>
                   <td class="num">{{ q.perDay }}</td>

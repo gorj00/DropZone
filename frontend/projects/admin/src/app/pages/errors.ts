@@ -14,7 +14,7 @@ import { Empty, Loading } from '../ui/bits';
       <h1 class="h text-[30px] flex-1">Server errors</h1>
       <button class="btn btn-ghost btn-sm" (click)="load()" [disabled]="loading()">Refresh</button>
     </div>
-    <p class="text-[13px] text-mute mt-2">Unexpected errors (HTTP 500) of the last 30 days, newest first. Full stack traces are in Cloud Logging.</p>
+    <p class="text-[15px] text-mute mt-2">Unexpected errors (HTTP 500) of the last 30 days, newest first. Full stack traces are in Cloud Logging.</p>
 
     @if (errors(); as list) {
       @if (list.length) {

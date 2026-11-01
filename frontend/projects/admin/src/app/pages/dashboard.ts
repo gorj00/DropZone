@@ -35,14 +35,14 @@ export function barHeights(signups: SignupDay[]): { day: string; count: number; 
         <div class="card p-5 xl:col-span-2">
           <div class="flex items-baseline justify-between">
             <div class="lbl">Sign-ups per day · last 30 days</div>
-            <div class="text-[12.5px] text-mute">{{ signupTotal() }} total</div>
+            <div class="text-[15px] text-mute">{{ signupTotal() }} total</div>
           </div>
           <div class="bars mt-4" role="img" [attr.aria-label]="signupTotal() + ' sign-ups in 30 days'">
             @for (b of bars(); track b.day) {
               <i [style.height.%]="b.pct" [class.hi]="b.count > 0" [title]="weekday(b.day) + ': ' + b.count"></i>
             }
           </div>
-          <div class="flex justify-between text-[11px] text-mute mt-2">
+          <div class="flex justify-between text-[15px] text-mute mt-2">
             <span>{{ weekday(bars()[0].day) }}</span><span>{{ weekday(bars()[bars().length - 1].day) }}</span>
           </div>
         </div>
@@ -67,12 +67,12 @@ export function barHeights(signups: SignupDay[]): { day: string; count: number; 
         <div class="card p-5" [class.card-danger]="d.failedJobs > 0">
           <div class="flex items-center justify-between">
             <div class="lbl">Scheduled jobs</div>
-            <a routerLink="/jobs" class="text-[12.5px] text-accent2 font-semibold">All jobs</a>
+            <a routerLink="/jobs" class="text-[15px] text-accent2 font-semibold">All jobs</a>
           </div>
           <div class="mt-3 divide-y divide-line">
             @for (j of d.jobs; track j.name) {
               <div class="py-2 flex items-center gap-3">
-                <span class="flex-1 font-semibold text-[13.5px] truncate">{{ j.name }}</span>
+                <span class="flex-1 font-semibold text-[15px] truncate">{{ j.name }}</span>
                 @if (j.failedAt) {
                   <span class="tag tag-danger" [title]="j.error ?? ''">Failed {{ ago(j.failedAt) }}</span>
                 } @else if (j.lastRunAt) {
@@ -88,7 +88,7 @@ export function barHeights(signups: SignupDay[]): { day: string; count: number; 
         <div class="card p-5" [class.card-danger]="d.openReports > 0">
           <div class="flex items-center justify-between">
             <div class="lbl">Moderation</div>
-            <a routerLink="/reports" class="text-[12.5px] text-accent2 font-semibold">Open queue</a>
+            <a routerLink="/reports" class="text-[15px] text-accent2 font-semibold">Open queue</a>
           </div>
           <div class="mt-3 flex items-baseline gap-3">
             <b class="h text-[42px]" [class.text-danger]="d.openReports > 0">{{ d.openReports }}</b>
@@ -99,17 +99,17 @@ export function barHeights(signups: SignupDay[]): { day: string; count: number; 
         <div class="card p-5">
           <div class="flex items-center justify-between">
             <div class="lbl">Latest billing events</div>
-            <a routerLink="/billing" class="text-[12.5px] text-accent2 font-semibold">All events</a>
+            <a routerLink="/billing" class="text-[15px] text-accent2 font-semibold">All events</a>
           </div>
           <div class="mt-3 divide-y divide-line">
             @for (e of d.billingEvents; track e.id) {
-              <div class="py-2 flex items-center gap-3 text-[13px]">
+              <div class="py-2 flex items-center gap-3 text-[15px]">
                 <span class="tag tag-plain">{{ e.type }}</span>
                 <span class="flex-1 truncate text-mute" [title]="e.email ?? e.appUserId ?? ''">{{ e.email ?? e.appUserId ?? '—' }}</span>
                 <span class="text-mute whitespace-nowrap">{{ ago(e.receivedAt) }}</span>
               </div>
             } @empty {
-              <div class="py-2 text-[13px] text-mute">No events yet.</div>
+              <div class="py-2 text-[15px] text-mute">No events yet.</div>
             }
           </div>
         </div>

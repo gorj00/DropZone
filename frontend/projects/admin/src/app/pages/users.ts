@@ -18,7 +18,7 @@ export const PAGE_SIZE = 50;
     </div>
 
     @if (page(); as p) {
-      <div class="text-[12.5px] text-mute mt-3">{{ p.total }} {{ p.total === 1 ? 'account' : 'accounts' }}</div>
+      <div class="text-[15px] text-mute mt-3">{{ p.total }} {{ p.total === 1 ? 'account' : 'accounts' }}</div>
       @if (p.items.length) {
         <div class="card mt-3 overflow-x-auto">
           <table class="tbl">
@@ -29,7 +29,7 @@ export const PAGE_SIZE = 50;
                   <td>
                     <div class="flex items-center gap-2.5">
                       <adm-avatar [url]="u.avatarUrl" [name]="u.displayName" [size]="30" />
-                      <div class="min-w-0"><div class="font-bold truncate">{{ u.displayName }}</div><div class="text-[12px] text-mute">&#64;{{ u.handle }}</div></div>
+                      <div class="min-w-0"><div class="font-bold truncate">{{ u.displayName }}</div><div class="text-[15px] text-mute">&#64;{{ u.handle }}</div></div>
                     </div>
                   </td>
                   <td class="text-mute">{{ u.email }}</td>
@@ -52,7 +52,7 @@ export const PAGE_SIZE = 50;
           </table>
         </div>
         @if (pages() > 1) {
-          <div class="flex items-center justify-end gap-3 mt-3 text-[12.5px] text-mute">
+          <div class="flex items-center justify-end gap-3 mt-3 text-[15px] text-mute">
             <span>Page {{ pageIndex() + 1 }} of {{ pages() }}</span>
             <button class="btn btn-ghost btn-sm" [disabled]="pageIndex() === 0" (click)="go(pageIndex() - 1)">Previous</button>
             <button class="btn btn-ghost btn-sm" [disabled]="pageIndex() + 1 >= pages()" (click)="go(pageIndex() + 1)">Next</button>

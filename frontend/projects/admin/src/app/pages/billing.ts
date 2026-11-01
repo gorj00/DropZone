@@ -14,7 +14,7 @@ import { Empty, Loading } from '../ui/bits';
       <h1 class="h text-[30px] flex-1">Billing events</h1>
       <button class="btn btn-ghost btn-sm" (click)="load()" [disabled]="loading()">Refresh</button>
     </div>
-    <p class="text-[13px] text-mute mt-2">RevenueCat webhook events as received, newest first. Each event id is applied once.</p>
+    <p class="text-[15px] text-mute mt-2">RevenueCat webhook events as received, newest first. Each event id is applied once.</p>
 
     @if (events(); as list) {
       @if (list.length) {

@@ -11,7 +11,7 @@ import { TARGET_NAMES, reasonLabel, removeQuestion } from './reports';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, Avatar, Loading],
   template: `
-    <a routerLink="/reports" class="text-[12.5px] text-accent2 font-semibold">← Reports</a>
+    <a routerLink="/reports" class="text-[15px] text-accent2 font-semibold">← Reports</a>
 
     @if (missing()) {
       <div class="card p-8 mt-4 text-center"><div class="h text-[24px]">Already gone</div><p class="text-mute mt-2">This item was deleted or the reports were closed.</p></div>
@@ -41,10 +41,10 @@ import { TARGET_NAMES, reasonLabel, removeQuestion } from './reports';
             <div class="card p-5">
               <div class="flex items-center gap-3">
                 @if (c.user; as u) { <adm-avatar [url]="u.avatarUrl" [name]="u.displayName" [size]="32" /> }
-                <div class="flex-1 min-w-0"><div class="font-bold">{{ c.user?.displayName ?? 'Unknown user' }}</div><div class="text-[12px] text-mute">{{ when(c.createdAt) }}</div></div>
+                <div class="flex-1 min-w-0"><div class="font-bold">{{ c.user?.displayName ?? 'Unknown user' }}</div><div class="text-[15px] text-mute">{{ when(c.createdAt) }}</div></div>
                 @if (c.user; as u) { <a class="btn btn-ghost btn-sm" [routerLink]="['/users', u.id]">User</a> }
               </div>
-              <p class="mt-3 whitespace-pre-line break-words text-[14px]">{{ c.body }}</p>
+              <p class="mt-3 whitespace-pre-line break-words text-[15px]">{{ c.body }}</p>
             </div>
           }
           @if (r.post; as p) {
@@ -52,7 +52,7 @@ import { TARGET_NAMES, reasonLabel, removeQuestion } from './reports';
             <div class="card overflow-hidden">
               <div class="flex items-center gap-3 p-5">
                 @if (p.user; as u) { <adm-avatar [url]="u.avatarUrl" [name]="u.displayName" [size]="32" /> }
-                <div class="flex-1 min-w-0"><div class="font-bold">{{ p.user?.displayName ?? 'Unknown user' }}</div><div class="text-[12px] text-mute">{{ p.title }} · {{ when(p.createdAt) }}</div></div>
+                <div class="flex-1 min-w-0"><div class="font-bold">{{ p.user?.displayName ?? 'Unknown user' }}</div><div class="text-[15px] text-mute">{{ p.title }} · {{ when(p.createdAt) }}</div></div>
                 <span class="tag tag-plain">{{ p.isPublic ? 'Public' : 'Friends' }}</span>
                 @if (p.hidden) { <span class="tag tag-danger">Hidden</span> }
                 @if (p.proofStatus) { <span class="tag tag-plain">Proof {{ p.proofStatus }}</span> }
@@ -60,16 +60,16 @@ import { TARGET_NAMES, reasonLabel, removeQuestion } from './reports';
               </div>
               @if (p.subtitle) { <p class="px-5 pb-4">{{ p.subtitle }}</p> }
               <div class="flex flex-wrap gap-3 px-5 pb-5">
-                @for (url of p.photos; track url) { <a [href]="url" target="_blank"><img class="max-h-[320px] rounded-[12px] bg-s2" [src]="url" alt=""></a> } @empty { <span class="text-mute text-[13px]">No photos.</span> }
+                @for (url of p.photos; track url) { <a [href]="url" target="_blank"><img class="max-h-[320px] rounded-[12px] bg-s2" [src]="url" alt=""></a> } @empty { <span class="text-mute text-[15px]">No photos.</span> }
               </div>
               @if (p.transformation; as t) {
-                <div class="px-5 pb-4 text-[13px] text-mute">Before: {{ t.beforeCaption || 'no caption' }} · After: {{ t.afterCaption || 'no caption' }}</div>
+                <div class="px-5 pb-4 text-[15px] text-mute">Before: {{ t.beforeCaption || 'no caption' }} · After: {{ t.afterCaption || 'no caption' }}</div>
               }
               @if (p.mlLabels.length || p.mlText) {
                 <div class="px-5 pb-5 border-t border-line pt-4">
                   <div class="lbl">AI saw</div>
                   <div class="flex flex-wrap gap-1.5 mt-2">@for (m of p.mlLabels; track m) { <span class="chip">{{ m }}</span> }</div>
-                  @if (p.mlText) { <p class="text-[12.5px] text-mute mt-2 whitespace-pre-line break-words">{{ p.mlText }}</p> }
+                  @if (p.mlText) { <p class="text-[15px] text-mute mt-2 whitespace-pre-line break-words">{{ p.mlText }}</p> }
                 </div>
               }
             </div>
@@ -80,7 +80,7 @@ import { TARGET_NAMES, reasonLabel, removeQuestion } from './reports';
           <div class="lbl">Reports</div>
           <div class="mt-2 divide-y divide-line">
             @for (e of r.reports; track $index) {
-              <div class="py-2.5 text-[13px]">
+              <div class="py-2.5 text-[15px]">
                 <div class="flex items-center gap-2">
                   @if (e.reporter; as u) {
                     <a class="flex items-center gap-2 font-semibold" [routerLink]="['/users', u.id]"><adm-avatar [url]="u.avatarUrl" [name]="u.displayName" [size]="22" />{{ u.displayName }}</a>
@@ -89,7 +89,7 @@ import { TARGET_NAMES, reasonLabel, removeQuestion } from './reports';
                 </div>
                 <div class="text-mute mt-1">{{ e.reason ? reasonLabel(e.reason) : 'No reason' }}{{ e.reason && reasonLabel(e.reason) !== e.reason ? ' · ' + e.reason : '' }}</div>
               </div>
-            } @empty { <div class="py-2 text-[13px] text-mute">No reports.</div> }
+            } @empty { <div class="py-2 text-[15px] text-mute">No reports.</div> }
           </div>
         </div>
       </div>

@@ -13,10 +13,10 @@ import { Session } from '../core/session';
         <img src="favicon.ico" alt="" class="w-14 h-14 rounded-[16px] mx-auto">
         <div class="h text-[30px] mt-4">DROP<em class="not-italic text-accent">ZONE</em></div>
         <div class="lbl mt-1">Backoffice</div>
-        <p class="text-[13.5px] text-mute mt-5">Sign in with the admin Google account. Any other account is refused.</p>
+        <p class="text-[15px] text-mute mt-5">Sign in with the admin Google account. Any other account is refused.</p>
         <div class="mt-6 min-h-[44px] flex justify-center" #button></div>
         @if (busy()) { <div class="flex justify-center mt-4"><span class="spin"></span></div> }
-        @if (error(); as e) { <p class="text-[13px] text-danger font-semibold mt-4">{{ e }}</p> }
+        @if (error(); as e) { <p class="text-[15px] text-danger font-semibold mt-4">{{ e }}</p> }
         @if (devLogin) {
           <form class="mt-8 pt-6 border-t border-line text-left" (submit)="$event.preventDefault(); dev(email.value)">
             <div class="lbl">Dev sign-in (local only)</div>

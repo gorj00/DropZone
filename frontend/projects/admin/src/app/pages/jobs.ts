@@ -23,7 +23,7 @@ export const SCHEDULES: Record<string, string> = {
       <h1 class="h text-[30px] flex-1">Scheduled jobs</h1>
       <button class="btn btn-ghost btn-sm" (click)="load()" [disabled]="loading()">Refresh</button>
     </div>
-    <p class="text-[13px] text-mute mt-2">Run by Cloud Scheduler through <span class="mono">POST /internal/jobs/&lt;name&gt;</span>. A failure stays flagged until the next good run.</p>
+    <p class="text-[15px] text-mute mt-2">Run by Cloud Scheduler through <span class="mono">POST /internal/jobs/&lt;name&gt;</span>. A failure stays flagged until the next good run.</p>
 
     @if (jobs(); as list) {
       <div class="card mt-5 overflow-x-auto">
