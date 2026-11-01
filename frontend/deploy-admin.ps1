@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Continue'
 
 $Project = 'gorol-saas-projects'
 $Bucket = 'dropzone.mobi'
@@ -17,7 +17,7 @@ finally {
 $files = Get-ChildItem $Out -Recurse -File
 foreach ($file in $files) {
     $path = $file.FullName.Substring($Out.Length + 1).Replace('\', '/')
-    $hashed = $path -match '-[A-Z0-9]{8}\.(js|css)$'
+    $hashed = $file.Extension -in '.js', '.css'
     $cache = if ($hashed) { 'public, max-age=31536000, immutable' } else { 'no-cache' }
     gcloud storage cp $file.FullName "gs://$Bucket/admin/$path" --project $Project --cache-control $cache --quiet
     if ($LASTEXITCODE -ne 0) { throw "upload of $path failed" }
