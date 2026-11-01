@@ -18,7 +18,10 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
 	Optional<User> findByEmail(String email);
 
-	@Query("select u from User u where lower(u.email) like :pattern or lower(u.handle) like :pattern or lower(u.displayName) like :pattern")
+	@Query("""
+			select u from User u where lower(u.email) like :pattern or lower(u.handle) like :pattern or lower(u.displayName) like :pattern
+			or lower(cast(u.id as string)) like :pattern
+			""")
 	Page<User> adminSearch(String pattern, Pageable pageable);
 
 	boolean existsByEmailAndIdNot(String email, UUID id);

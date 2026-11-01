@@ -14,7 +14,7 @@ export const PAGE_SIZE = 50;
   template: `
     <div class="flex items-center gap-4">
       <h1 class="h text-[30px] flex-1">Users</h1>
-      <input class="field w-[320px]" type="search" placeholder="Search e-mail, handle or name" [value]="q()" (input)="search(input.value)" #input>
+      <input class="field w-[320px]" type="search" placeholder="Search e-mail, handle, name or user id" [value]="q()" (input)="search(input.value)" #input>
     </div>
 
     @if (page(); as p) {

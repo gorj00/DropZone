@@ -87,6 +87,11 @@ class AdminIntegrationTest extends IntegrationTest {
 				.andExpect(jsonPath("$.items[0].id").value(zed.id().toString()))
 				.andExpect(jsonPath("$.items[0].onboarded").value(true))
 				.andExpect(jsonPath("$.items[0].admin").value(false));
+		get(admin, "/api/v1/admin/users?q=" + zed.id()).andExpect(status().isOk())
+				.andExpect(jsonPath("$.total").value(1))
+				.andExpect(jsonPath("$.items[0].id").value(zed.id().toString()));
+		get(admin, "/api/v1/admin/users?q=" + zed.id().toString().substring(0, 8).toUpperCase()).andExpect(status().isOk())
+				.andExpect(jsonPath("$.items[?(@.id=='" + zed.id() + "')]").isNotEmpty());
 		get(admin, "/api/v1/admin/users?q=&size=500").andExpect(status().isOk())
 				.andExpect(jsonPath("$.items.length()").value(org.hamcrest.Matchers.lessThanOrEqualTo(200)));
 
