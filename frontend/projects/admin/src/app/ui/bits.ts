@@ -9,7 +9,7 @@ import type { UserRow } from '../core/models';
     @if (url()) {
       <img class="av" [style.width.px]="size()" [style.height.px]="size()" [src]="url()" alt="">
     } @else {
-      <span class="av" [style.width.px]="size()" [style.height.px]="size()" [style.font-size.px]="size() * 0.38">{{ letters() }}</span>
+      <span class="av" [style.width.px]="size()" [style.height.px]="size()" [style.font-size.px]="fontSize()">{{ letters() }}</span>
     }
   `
 })
@@ -18,6 +18,7 @@ export class Avatar {
   readonly name = input<string | null>(null);
   readonly size = input(32);
   protected readonly letters = computed(() => initials(this.name()));
+  protected readonly fontSize = computed(() => Math.max(12, Math.round(this.size() * 0.4)));
 }
 
 @Component({
