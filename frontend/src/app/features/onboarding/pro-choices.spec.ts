@@ -27,7 +27,7 @@ async function setup(u: Partial<User>) {
       provideHttpClient(withInterceptors([authInterceptor])),
       provideHttpClientTesting(),
       provideRouter([{ path: '**', children: [] }]),
-      { provide: LockService, useValue: { native: false, blocked: () => false, ready: () => true, status: signal(null), disable: vi.fn().mockResolvedValue(undefined), sync: vi.fn() } }
+      { provide: LockService, useValue: { native: false, blocked: () => false, ready: () => true, allowed: (a: { free: boolean }, pro: boolean) => pro || a.free, status: signal(null), disable: vi.fn().mockResolvedValue(undefined), sync: vi.fn() } }
     ]
   });
   const session = TestBed.inject(SessionStore);

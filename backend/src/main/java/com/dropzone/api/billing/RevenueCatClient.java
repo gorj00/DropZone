@@ -13,10 +13,15 @@ public interface RevenueCatClient {
 	boolean cancelPlaySubscription(String appUserId, String storeTransactionId);
 
 	record Entitlement(boolean present, Instant expiresAt, String productId, boolean willRenew, Instant billingIssueAt,
-			List<String> renewingPlayTransactions) {
+			List<String> renewingPlayTransactions, String store) {
 
 		public Entitlement(boolean present, Instant expiresAt, String productId, boolean willRenew, Instant billingIssueAt) {
-			this(present, expiresAt, productId, willRenew, billingIssueAt, List.of());
+			this(present, expiresAt, productId, willRenew, billingIssueAt, List.of(), null);
+		}
+
+		public Entitlement(boolean present, Instant expiresAt, String productId, boolean willRenew, Instant billingIssueAt,
+				List<String> renewingPlayTransactions) {
+			this(present, expiresAt, productId, willRenew, billingIssueAt, renewingPlayTransactions, null);
 		}
 
 		public static Entitlement none() {

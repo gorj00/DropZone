@@ -32,6 +32,8 @@ class RateLimitIntegrationTest extends IntegrationTest {
 				.andExpect(jsonPath("$.status").value(429))
 				.andExpect(jsonPath("$.code").value("RATE_LIMITED"))
 				.andExpect(jsonPath("$.message").value("Slow down a little — try again in a few minutes."));
+		appleAuth(apple.token("apple-" + subject, email, true), null, ip).andExpect(status().isTooManyRequests())
+				.andExpect(jsonPath("$.code").value("RATE_LIMITED"));
 		googleAuth(google.token(subject, email, true, "Limited", null), "198.51.100.9").andExpect(status().isOk());
 	}
 

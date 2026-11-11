@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isEuCountry, isEuTimeZone, regionOf } from './region';
+import { isEuCountry, isEuTimeZone, regionOf, regionOfLanguage } from './region';
 
 describe('regionOf', () => {
   it('uses the SIM country first', () => {
@@ -17,5 +17,17 @@ describe('regionOf', () => {
     expect(isEuCountry('NO')).toBe(false);
     expect(isEuTimeZone('Europe/London')).toBe(false);
     expect(isEuTimeZone('Europe/Lisbon')).toBe(true);
+  });
+});
+
+describe('regionOfLanguage', () => {
+  it('reads the region from a language tag', () => {
+    expect(regionOfLanguage('cs-CZ')).toBe('CZ');
+    expect(regionOfLanguage('zh-Hans-cn')).toBe('CN');
+  });
+
+  it('returns nothing when the tag has no region', () => {
+    expect(regionOfLanguage('en')).toBe('');
+    expect(regionOfLanguage(null)).toBe('');
   });
 });

@@ -20,7 +20,7 @@ public class ProductionGuard {
 
 	static final String DEV_JWT_SECRET = "local-dev-secret-change-me-0123456789abcdef";
 	static final String DEV_WEBHOOK_SECRET = "dev-webhook-secret";
-	static final Set<String> APP_ORIGINS = Set.of("https://localhost");
+	static final Set<String> APP_ORIGINS = Set.of("https://localhost", "capacitor://localhost");
 	static final String SIGNED_HOST = "https://storage.googleapis.com/";
 
 	@Bean

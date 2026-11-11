@@ -32,6 +32,15 @@ const FEATURES = [
         <div class="h text-[46px] mt-4">You vs<br><span class="text-accent glow-text">your goal</span></div>
         <p class="text-[15px] text-mute mt-3 leading-snug">Daily quests, real rewards and friends who keep you honest.</p>
         <div class="mt-6">
+          @if (apple) {
+            <button class="btn mb-3 bg-white text-black" [disabled]="busy()" (click)="start('apple')">
+              <svg viewBox="0 0 24 24" class="w-[22px] h-[22px] shrink-0" fill="currentColor" aria-hidden="true">
+                <path d="M16.37 12.6c-.03-2.6 2.12-3.85 2.22-3.91-1.21-1.77-3.09-2.01-3.76-2.04-1.6-.16-3.12.94-3.93.94-.81 0-2.06-.92-3.39-.89-1.74.03-3.35 1.01-4.25 2.57-1.81 3.14-.46 7.79 1.3 10.34.86 1.25 1.89 2.65 3.24 2.6 1.3-.05 1.79-.84 3.36-.84 1.57 0 2.01.84 3.39.81 1.4-.03 2.29-1.27 3.14-2.53.99-1.45 1.4-2.85 1.42-2.92-.03-.01-2.72-1.04-2.74-4.13zM13.79 4.98c.72-.87 1.2-2.08 1.07-3.28-1.03.04-2.28.69-3.02 1.55-.66.77-1.24 2-1.09 3.18 1.15.09 2.32-.58 3.04-1.45z"/>
+              </svg>
+              {{ busy() ? 'Signing in…' : 'Continue with Apple' }}
+            </button>
+          }
+          @if (google) {
           <button class="btn btn-primary" [disabled]="busy()" (click)="start()">
             <span class="grid place-items-center w-8 h-8 rounded-full bg-white shrink-0">
               <svg viewBox="0 0 48 48" class="w-[18px] h-[18px]" aria-hidden="true">
@@ -43,6 +52,7 @@ const FEATURES = [
             </span>
             {{ busy() ? 'Signing in…' : 'Continue with Google' }}
           </button>
+          }
         </div>
       </div>
     </div>
@@ -56,12 +66,14 @@ export class WelcomePage {
 
   protected readonly features = FEATURES;
   protected readonly busy = signal(false);
+  protected readonly apple = this.auth.apple;
+  protected readonly google = this.auth.showGoogle;
 
-  protected async start(): Promise<void> {
+  protected async start(provider: 'google' | 'apple' = 'google'): Promise<void> {
     if (this.busy()) return;
     this.busy.set(true);
     try {
-      const user = await this.auth.signInWithGoogle();
+      const user = provider === 'apple' ? await this.auth.signInWithApple() : await this.auth.signInWithGoogle();
       const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
       const next = returnUrl?.startsWith('/') && !returnUrl.startsWith('//') ? returnUrl : user.onboarded ? '/today' : '/onboarding/profile';
       await this.router.navigateByUrl(next, { replaceUrl: true });

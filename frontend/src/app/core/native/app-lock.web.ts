@@ -15,4 +15,14 @@ export class AppLockWeb extends WebPlugin implements AppLockPlugin {
   async setConfig(config: AppLockConfig): Promise<void> {
     this.config = config;
   }
+
+  async requestAuthorization(): Promise<{ granted: boolean }> {
+    return { granted: true };
+  }
+
+  async pickApp(): Promise<{ picked: boolean }> {
+    return { picked: true };
+  }
+
+  async forgetApp(): Promise<void> { }
 }

@@ -86,3 +86,16 @@ describe('LockService.sync', () => {
     expect(plugin.setConfig).not.toHaveBeenCalled();
   });
 });
+
+describe('LockService.allowed', () => {
+  it('lets free users lock only the free app and PRO users any app', () => {
+    const { lock } = setup();
+    const instagram = { pkg: 'com.instagram.android', free: true };
+    const tiktok = { pkg: 'com.zhiliaoapp.musically', free: false };
+
+    expect(lock.allowed(instagram, false, [])).toBe(true);
+    expect(lock.allowed(tiktok, false, [])).toBe(false);
+    expect(lock.allowed(tiktok, true, [instagram.pkg])).toBe(true);
+    expect(lock.incomplete([tiktok.pkg])).toBe(false);
+  });
+});

@@ -262,4 +262,26 @@ describe('SettingsPage privacy and push switches', () => {
     expect(button('Comments')!.getAttribute('aria-checked')).toBe('false');
     await session.clear();
   });
+
+  it('shows the other push types on by default and turns each off', async () => {
+    const switches: [string, string][] = [
+      ['Daily reminders', 'reminderPushes'],
+      ['Milestone deadlines', 'deadlinePushes'],
+      ['Proof results', 'proofResultPushes'],
+      ['Hypes', 'hypePushes'],
+      ['Friend requests', 'friendPushes']
+    ];
+    const { button, http, settle, session } = await render({});
+    for (const [title, key] of switches) {
+      const toggle = button(title)!;
+      expect(toggle.getAttribute('aria-checked')).toBe('true');
+      toggle.click();
+      const req = await patchOnce(http);
+      expect(req.request.body).toEqual({ [key]: false });
+      req.flush(user({ [key]: false }));
+      await settle();
+      expect(button(title)!.getAttribute('aria-checked')).toBe('false');
+    }
+    await session.clear();
+  });
 });

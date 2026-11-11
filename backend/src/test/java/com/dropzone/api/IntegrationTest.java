@@ -69,6 +69,12 @@ public abstract class IntegrationTest {
 	protected TestFakes.FakeGoogle google;
 
 	@Autowired
+	protected TestFakes.FakeApple apple;
+
+	@Autowired
+	protected TestFakes.FakeAppleTokens appleTokens;
+
+	@Autowired
 	protected TestFakes.InMemoryStorage storage;
 
 	@Autowired
@@ -110,12 +116,39 @@ public abstract class IntegrationTest {
 	}
 
 	protected ResultActions googleAuth(String idToken) throws Exception {
-		return googleAuth(idToken, "10.%d.%d.%d".formatted(RANDOM.nextInt(256), RANDOM.nextInt(256), 1 + RANDOM.nextInt(254)));
+		return googleAuth(idToken, randomIp());
 	}
 
 	protected ResultActions googleAuth(String idToken, String clientIp) throws Exception {
 		return mvc.perform(request(HttpMethod.POST, "/api/v1/auth/google").header("X-Forwarded-For", clientIp)
 				.contentType(MediaType.APPLICATION_JSON).content("{\"idToken\":\"%s\"}".formatted(idToken)));
+	}
+
+	protected Session appleLogin(String subject, String email, String name) throws Exception {
+		String body = body(appleAuth(apple.token(subject, email, true), name).andExpect(status().isOk()));
+		return new Session(JsonPath.read(body, "$.token"), UUID.fromString(JsonPath.read(body, "$.user.id")),
+				JsonPath.read(body, "$.user.handle"), JsonPath.read(body, "$.user.inviteCode"));
+	}
+
+	protected ResultActions appleAuth(String idToken, String name) throws Exception {
+		return appleAuth(idToken, name, randomIp());
+	}
+
+	protected ResultActions appleAuth(String idToken, String name, String clientIp) throws Exception {
+		return appleAuth(idToken, name, null, clientIp);
+	}
+
+	protected ResultActions appleAuth(String idToken, String name, String authorizationCode, String clientIp) throws Exception {
+		String json = "{\"idToken\":\"%s\"".formatted(idToken)
+				+ (name == null ? "" : ",\"name\":\"%s\"".formatted(name))
+				+ (authorizationCode == null ? "" : ",\"authorizationCode\":\"%s\"".formatted(authorizationCode))
+				+ "}";
+		return mvc.perform(request(HttpMethod.POST, "/api/v1/auth/apple").header("X-Forwarded-For", clientIp)
+				.contentType(MediaType.APPLICATION_JSON).content(json));
+	}
+
+	protected static String randomIp() {
+		return "10.%d.%d.%d".formatted(RANDOM.nextInt(256), RANDOM.nextInt(256), 1 + RANDOM.nextInt(254));
 	}
 
 	protected ResultActions job(String name, String token) throws Exception {

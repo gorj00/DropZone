@@ -28,17 +28,23 @@ import { OnboardingState } from './onboarding.state';
 
       <div class="mx-5 mt-4 card divide-y divide-line overflow-hidden">
         @for (a of apps; track a.pkg) {
-          @let locked = !pro() && !a.free;
+          @let locked = !allowed(a);
           <button class="w-full flex items-center gap-3 px-4 h-[62px] text-left" (click)="toggle(a)">
             <app-tile [key]="a.key" />
             <div class="flex-1">
               <div class="font-bold text-[15.5px]">{{ a.name }}</div>
-              @if (a.free) { <span class="tag tag-free">Free</span> } @else { <span class="tag tag-pro"><app-icon name="crown" />PRO</span> }
+              @if (lock.ios) {
+                @if (locked) { <span class="tag tag-pro"><app-icon name="crown" />PRO</span> }
+              } @else if (a.free) { <span class="tag tag-free">Free</span> } @else { <span class="tag tag-pro"><app-icon name="crown" />PRO</span> }
             </div>
             <span class="tog" [class.on]="isOn(a)" [class.opacity-50]="locked"></span>
           </button>
         }
       </div>
+
+      @if (lock.ios) {
+        <p class="mx-5 mt-2.5 text-[12.5px] text-mute leading-snug">Tap an app, then tick the same app in Apple's list.@if (!pro()) { Free locks 1 app, PRO locks all 4. }</p>
+      }
 
       @if (lock.blocked()) {
         <div class="mx-5 mt-3"><app-ap-warning /></div>
@@ -54,7 +60,7 @@ import { OnboardingState } from './onboarding.state';
             <span class="qi bg-[rgba(var(--gold-rgb),.12)] text-gold"><app-icon name="lock" /></span>
             <div class="flex-1 min-w-0">
               <div class="font-bold text-[14.5px]">Turn on app lock</div>
-              <p class="text-[12.5px] text-mute leading-snug mt-0.5">Allow DropZone in Accessibility so it can cover locked apps.</p>
+              <p class="text-[12.5px] text-mute leading-snug mt-0.5">{{ lock.ios ? 'Allow Screen Time access so DropZone can lock the apps you pick.' : 'Allow DropZone in Accessibility so it can cover locked apps.' }}</p>
             </div>
             <button class="qbtn soft" (click)="enable()">Enable</button>
           </div>
@@ -114,7 +120,7 @@ export class LockPage implements OnInit {
 
   ngOnInit(): void {
     if (!this.pro()) {
-      this.state.lockedApps.update(list => list.filter(p => LOCKABLE_APPS.find(a => a.pkg === p)?.free));
+      if (!this.lock.ios) this.state.lockedApps.update(list => list.filter(p => LOCKABLE_APPS.find(a => a.pkg === p)?.free));
       this.state.unlockMode.set('WHOLE_DAY');
     }
     if (!this.lock.native) return;
@@ -127,12 +133,26 @@ export class LockPage implements OnInit {
     return this.state.lockedApps().includes(a.pkg);
   }
 
-  protected toggle(a: LockableApp): void {
-    if (!this.pro() && !a.free) {
+  protected allowed(a: LockableApp): boolean {
+    return this.lock.allowed(a, this.pro(), this.state.lockedApps());
+  }
+
+  protected async toggle(a: LockableApp): Promise<void> {
+    if (!this.allowed(a)) {
       void this.router.navigateByUrl('/paywall');
       return;
     }
-    this.state.lockedApps.update(list => (list.includes(a.pkg) ? list.filter(p => p !== a.pkg) : [...list, a.pkg]));
+    const on = this.isOn(a);
+    if (this.lock.ios) {
+      try {
+        if (on) await this.lock.forget(a.pkg);
+        else if (!(await this.lock.ensureApp(a))) return;
+      } catch (e) {
+        this.toast.error(e);
+        return;
+      }
+    }
+    this.state.lockedApps.update(list => (on ? list.filter(p => p !== a.pkg) : [...list.filter(p => p !== a.pkg), a.pkg]));
   }
 
   protected setMode(mode: UnlockMode): void {
@@ -171,5 +191,8 @@ export class LockPage implements OnInit {
 
   private async refresh(): Promise<void> {
     try { await this.lock.refreshStatus(); } catch { }
+    if (!this.lock.ios) return;
+    const picked = this.lock.picked();
+    this.state.lockedApps.update(list => list.filter(p => picked.includes(p)).slice(0, this.pro() ? undefined : 1));
   }
 }

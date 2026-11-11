@@ -1,6 +1,7 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
 import { AppSettings } from './native/plugins';
+import { IS_IOS } from './platform';
 
 const COUNTRIES = new Set([
   'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT',
@@ -40,6 +41,10 @@ export function regionOf(found: { sim?: string; network?: string; locale?: strin
   return { source: 'TIME_ZONE', value: zone, eu: isEuTimeZone(zone) };
 }
 
+export function regionOfLanguage(tag: string | null | undefined): string {
+  return /^[a-z]{2,3}(?:-[A-Za-z]{4})?-([A-Za-z]{2})\b/.exec(tag ?? '')?.[1]?.toUpperCase() ?? '';
+}
+
 function timeZone(): string {
   try { return Intl.DateTimeFormat().resolvedOptions().timeZone ?? ''; } catch { return ''; }
 }
@@ -55,7 +60,8 @@ export class RegionService {
 
   private async detect(): Promise<void> {
     try {
-      this.region.set(regionOf(await AppSettings.getRegion(), timeZone()));
+      const found = IS_IOS ? { locale: regionOfLanguage(navigator.language) } : await AppSettings.getRegion();
+      this.region.set(regionOf(found, timeZone()));
     } catch { }
   }
 }

@@ -1,6 +1,7 @@
 package com.dropzone.api.user;
 
 import com.dropzone.api.common.ApiException;
+import com.dropzone.api.common.ClientPlatform;
 import com.dropzone.api.common.Dtos.HandleCheck;
 import com.dropzone.api.common.Dtos.UserDto;
 import com.dropzone.api.common.Dtos.UserSummary;
@@ -158,7 +159,8 @@ public class UserService {
 				isAdmin(user), user.bio, user.isTrialEndPending(now), consentRequired(user), user.isSuspended(),
 				user.willRenew && user.isSubscribed(now), user.proProductId, user.billingIssueAt != null, user.isProEndPending(now),
 				user.skipRestDays, user.hiddenFromSearch, user.hiddenFromLeaderboards, user.verifyRequestPushes, user.commentPushes,
-				user.shareStats, user.billingHold && !user.isSubscribed(now), user.pendingPlan(now), user.pendingPlan(now) == null ? null : user.pendingSwitchAt);
+				user.shareStats, user.billingHold && !user.isSubscribed(now), user.pendingPlan(now), user.pendingPlan(now) == null ? null : user.pendingSwitchAt,
+				user.reminderPushes, user.deadlinePushes, user.hypePushes, user.friendPushes, user.proofResultPushes);
 	}
 
 	private static void setShareStats(User user, boolean share, Instant now) {
@@ -217,6 +219,9 @@ public class UserService {
 
 	public List<String> effectiveLockedApps(User user) {
 		boolean pro = isPro(user);
+		if (!pro && ClientPlatform.ios()) {
+			return user.lockedApps.contains(INSTAGRAM) ? List.of(INSTAGRAM) : user.lockedApps.stream().sorted().limit(1).toList();
+		}
 		return user.lockedApps.stream().filter(p -> pro || p.equals(INSTAGRAM)).toList();
 	}
 
@@ -320,6 +325,21 @@ public class UserService {
 		if (req.commentPushes() != null) {
 			user.commentPushes = req.commentPushes();
 		}
+		if (req.reminderPushes() != null) {
+			user.reminderPushes = req.reminderPushes();
+		}
+		if (req.deadlinePushes() != null) {
+			user.deadlinePushes = req.deadlinePushes();
+		}
+		if (req.hypePushes() != null) {
+			user.hypePushes = req.hypePushes();
+		}
+		if (req.friendPushes() != null) {
+			user.friendPushes = req.friendPushes();
+		}
+		if (req.proofResultPushes() != null) {
+			user.proofResultPushes = req.proofResultPushes();
+		}
 		if (req.shareStats() != null) {
 			setShareStats(user, req.shareStats(), clock.instant());
 		}
@@ -374,8 +394,15 @@ public class UserService {
 	public void applyLockedApps(User user, List<String> packages) {
 		List<String> clean = packages == null ? List.of()
 				: packages.stream().map(String::trim).filter(p -> !p.isEmpty()).distinct().toList();
-		if (!isPro(user) && clean.stream().anyMatch(p -> !p.equals(INSTAGRAM))) {
-			throw ApiException.proRequired("Locking apps other than Instagram is a PRO feature");
+		if (!isPro(user)) {
+			if (ClientPlatform.ios()) {
+				if (clean.size() > 1) {
+					throw ApiException.proRequired("Locking more than one app is a PRO feature");
+				}
+			}
+			else if (clean.stream().anyMatch(p -> !p.equals(INSTAGRAM))) {
+				throw ApiException.proRequired("Locking apps other than Instagram is a PRO feature");
+			}
 		}
 		user.lockedApps.clear();
 		user.lockedApps.addAll(clean);

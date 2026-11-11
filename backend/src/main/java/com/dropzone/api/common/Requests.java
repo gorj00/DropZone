@@ -49,6 +49,10 @@ public final class Requests {
 	public record GoogleAuth(@NotBlank @Size(max = 4096) String idToken) {
 	}
 
+	public record AppleAuth(@NotBlank @Size(max = 4096) String idToken, @Size(max = 80) String name,
+			@Size(max = 2048) String authorizationCode) {
+	}
+
 	public record DevAuth(@NotBlank @Email @Size(max = 320) String email, @NotBlank @Size(max = 80) String displayName) {
 	}
 
@@ -57,7 +61,8 @@ public final class Requests {
 			Boolean slipUpTracking, @Size(max = 64) String timezone, WeightUnit weightUnit, LengthUnit lengthUnit,
 			@Size(max = 150) String bio, @Size(max = MAX_URL) String avatarUrl, Boolean trialEndAcknowledged, Boolean proEndAcknowledged,
 			Boolean skipRestDays, Boolean hiddenFromSearch, Boolean hiddenFromLeaderboards, Boolean verifyRequestPushes, Boolean commentPushes,
-			Boolean shareStats, @Valid Region region) {
+			Boolean shareStats, @Valid Region region, Boolean reminderPushes, Boolean deadlinePushes, Boolean hypePushes,
+			Boolean friendPushes, Boolean proofResultPushes) {
 	}
 
 	public record UpdateGoal(@Positive Double startValue, @Positive Double goalValue) {

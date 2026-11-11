@@ -8,6 +8,7 @@ import { DisclosureKind, DisclosureService } from '../../core/native/disclosure'
 import { RegionService } from '../../core/region';
 import { SessionStore } from '../../core/session.store';
 import { ToastService } from '../../core/toast.service';
+import { HEALTH_NAME } from '../../core/platform';
 import { Badge } from '../../ui/badge';
 import { Icon } from '../../ui/icon';
 import { DeleteAccountSheet } from '../settings/delete-account';
@@ -127,15 +128,15 @@ const DISCLOSURES: Record<DisclosureKind, { title: string; lead: string; icon: s
     footer: 'Next, Android opens Accessibility settings. Tap Installed apps (on some phones Downloaded apps), then DropZone app lock, and turn it on. No such section? Find DropZone app lock there and turn it on.'
   },
   HEALTH: {
-    title: 'Connect Health Connect',
-    lead: 'Steps and sleep from Health Connect complete your quests.',
+    title: `Connect ${HEALTH_NAME}`,
+    lead: `Steps and sleep from ${HEALTH_NAME} complete your quests.`,
     icon: 'steps',
     points: [
-      { icon: 'steps', title: 'What we read', text: 'Your steps and your sleep. Nothing else from Health Connect.' },
+      { icon: 'steps', title: 'What we read', text: `Your steps and your sleep. Nothing else from ${HEALTH_NAME}.` },
       { icon: 'chart', title: 'What is saved', text: 'Only daily totals, to mark your steps and sleep quests done.' }
     ],
     yes: 'Continue',
-    footer: 'Next, Health Connect asks which data DropZone may read.'
+    footer: `Next, ${HEALTH_NAME} asks which data DropZone may read.`
   }
 };
 

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { AutoSource, Exercise, ProofType } from '../core/api/models';
+import { HEALTH_NAME } from '../core/platform';
 import { Icon } from './icon';
 
 export const MAX_PER_DAY = 20;
@@ -87,7 +88,7 @@ export function daysLabel(days: number[]): string {
       <div class="flex items-center justify-between gap-3 mt-3">
         <div class="min-w-0">
           <div class="text-[13.5px] font-bold">Daily goal</div>
-          <div class="text-[11.5px] text-mute">{{ kind === 'SLEEP' ? 'Synced from Health Connect sleep' : 'Synced from Health Connect steps' }}</div>
+          <div class="text-[11.5px] text-mute">{{ 'Synced from ' + healthName + (kind === 'SLEEP' ? ' sleep' : ' steps') }}</div>
         </div>
         <div class="flex items-center gap-2">
           <button type="button" class="stp" aria-label="Lower daily goal" [disabled]="disabled() || (goal() ?? 0) <= rules(kind).min" (click)="stepGoal(kind, -1)"><app-icon name="minus" /></button>
@@ -112,6 +113,7 @@ export function daysLabel(days: number[]): string {
   `
 })
 export class QuestSchedule {
+  protected readonly healthName = HEALTH_NAME;
   readonly days = input<number[]>(ALL_DAYS);
   readonly perDay = input<number | null>(null);
   readonly goal = input<number | null>(null);

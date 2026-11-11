@@ -26,7 +26,7 @@ class ProductionGuardTest {
 
 	private static AppProperties props(boolean devLogin, String jwt, String webhook, String endpoint, String publicUrl, List<String> cors,
 			String firebase, AppProperties.Jobs jobs) {
-		return new AppProperties(new AppProperties.Auth(jwt, 7, List.of("client"), devLogin),
+		return new AppProperties(new AppProperties.Auth(jwt, 7, List.of("client"), List.of("com.dropzone.app"), null, null, null, devLogin),
 				new AppProperties.Storage("bucket", endpoint, publicUrl, false, "project"), new AppProperties.Push(firebase),
 				new AppProperties.Billing(webhook, "", "pro"), new AppProperties.Photos(""), new AppProperties.Cors(cors),
 				new AppProperties.Legal("1", "1", "", "", ""), new AppProperties.App(1), jobs, "https://x/invite/", List.of());
@@ -40,6 +40,9 @@ class ProductionGuardTest {
 	@Test
 	void productionValuesPass() {
 		assertThat(ProductionGuard.problems(good(), CLOUD_SQL, true)).isEmpty();
+		AppProperties iphone = props(false, "a-real-secret-0123456789abcdef0123456789", "real-webhook-secret", "",
+				"https://storage.googleapis.com/bucket", List.of("https://localhost", "capacitor://localhost", "https://dropzone.mobi"), "adc");
+		assertThat(ProductionGuard.problems(iphone, CLOUD_SQL, true)).isEmpty();
 	}
 
 	@Test

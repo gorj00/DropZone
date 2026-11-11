@@ -12,7 +12,7 @@ import org.springframework.http.HttpStatus;
 class GoogleApiTokenVerifierTest {
 
 	private static AppProperties props(List<String> clientIds) {
-		return new AppProperties(new AppProperties.Auth("x".repeat(32), 7, clientIds, false), null, null, null, null, null, null, null, null,
+		return new AppProperties(new AppProperties.Auth("x".repeat(32), 7, clientIds, List.of(), null, null, null, false), null, null, null, null, null, null, null, null,
 				null, null);
 	}
 

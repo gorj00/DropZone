@@ -11,6 +11,7 @@ import { AuthService } from '../../core/auth';
 import { AvatarService } from '../../core/avatar.service';
 import { ConfigService, openExternal, playSubscriptionsUrl } from '../../core/config.service';
 import { DataExportService } from '../../core/data-export';
+import { HEALTH_NAME, OS_NAME, STORE, storeOf } from '../../core/platform';
 import { BillingService, planLabel } from '../../core/native/billing';
 import { HealthService } from '../../core/native/health';
 import { LockService } from '../../core/native/lock';
@@ -31,7 +32,8 @@ import { GoalKind, QuestSchedule, daysLabel, goalKindOf, goalOf, goalText } from
 import { DeleteAccountSheet } from './delete-account';
 
 type Section = 'apps' | 'unlock' | 'quests' | 'verify' | 'blocked';
-type Flag = 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'verifyRequestPushes' | 'commentPushes' | 'shareStats';
+const PUSH_FLAGS = ['reminderPushes', 'deadlinePushes', 'verifyRequestPushes', 'proofResultPushes', 'commentPushes', 'hypePushes', 'friendPushes'] as const;
+type Flag = 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'shareStats' | (typeof PUSH_FLAGS)[number];
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -121,7 +123,7 @@ type Flag = 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'verifyRequestPushes
           @if (u.billingIssue || u.billingHold) {
             <button class="w-full card-gold p-3.5 mb-2.5 flex items-center gap-3 text-left" (click)="fixPayment()">
               <span class="qi bg-[rgba(var(--gold-rgb),.12)] text-gold"><app-icon name="coins" /></span>
-              <span class="flex-1 min-w-0 font-bold text-[14px] leading-snug">{{ u.billingHold ? 'PRO is on hold — fix your payment in Google Play to get it back' : 'Payment problem — fix it in Google Play to keep PRO' }}</span>
+              <span class="flex-1 min-w-0 font-bold text-[14px] leading-snug">{{ u.billingHold ? 'PRO is on hold — fix your payment in ' + store().name + ' to get it back' : 'Payment problem — fix it in ' + store().name + ' to keep PRO' }}</span>
               <span class="text-mute inline-flex"><app-icon name="chev" [size]="16" /></span>
             </button>
           }
@@ -158,8 +160,8 @@ type Flag = 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'verifyRequestPushes
                 @for (a of apps; track a.pkg) {
                   <button class="w-full flex items-center gap-3 h-[48px] text-left" (click)="toggleApp(a)">
                     <app-tile [key]="a.key" [size]="30" />
-                    <span class="flex-1 font-semibold text-[14px] flex items-center gap-1.5">{{ a.name }}@if (!a.free && !u.pro) { <app-pro-tag /> }</span>
-                    <span class="tog" [class.on]="u.lockedApps.includes(a.pkg)" [class.disabled]="!a.free && !u.pro"></span>
+                    <span class="flex-1 font-semibold text-[14px] flex items-center gap-1.5">{{ a.name }}@if (!lockAllowed(a, u)) { <app-pro-tag /> }</span>
+                    <span class="tog" [class.on]="u.lockedApps.includes(a.pkg)" [class.disabled]="!lockAllowed(a, u)"></span>
                   </button>
                 }
               </div>
@@ -277,7 +279,7 @@ type Flag = 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'verifyRequestPushes
             }
 
             <div class="flex items-center gap-3 px-3.5 h-[56px]">
-              <span class="flex-1"><span class="block font-semibold text-[14.5px] leading-tight">App blocker</span><span class="block text-[12px] text-mute">Accessibility service that locks apps</span></span>
+              <span class="flex-1"><span class="block font-semibold text-[14.5px] leading-tight">App blocker</span><span class="block text-[12px] text-mute">{{ lock.ios ? 'Screen Time access that locks apps' : 'Accessibility service that locks apps' }}</span></span>
               @if (!lock.native) {
                 <span class="text-[12.5px] text-mute font-semibold">Android only</span>
               } @else if (lock.blocked()) {
@@ -293,7 +295,7 @@ type Flag = 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'verifyRequestPushes
             }
 
             <div class="flex items-center gap-3 px-3.5 h-[56px]">
-              <span class="flex-1"><span class="block font-semibold text-[14.5px] leading-tight">Health Connect</span><span class="block text-[12px] text-mute">Steps &amp; sleep for auto quests</span></span>
+              <span class="flex-1"><span class="block font-semibold text-[14.5px] leading-tight">{{ healthName }}</span><span class="block text-[12px] text-mute">Steps &amp; sleep for auto quests</span></span>
               @if (!health.native) {
                 <span class="text-[12.5px] text-mute font-semibold">Android only</span>
               } @else if (health.authorized()) {
@@ -335,8 +337,13 @@ type Flag = 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'verifyRequestPushes
                 <span class="text-mute inline-flex"><app-icon name="chev" [size]="16" /></span>
               </button>
             }
+            <ng-container *ngTemplateOutlet="switchRow; context: { key: 'reminderPushes', on: u.reminderPushes !== false, title: 'Daily reminders', text: 'A nudge when quests are still left to unlock your apps today' }" />
+            <ng-container *ngTemplateOutlet="switchRow; context: { key: 'deadlinePushes', on: u.deadlinePushes !== false, title: 'Milestone deadlines', text: 'A heads-up when a milestone proof is due soon' }" />
             <ng-container *ngTemplateOutlet="switchRow; context: { key: 'verifyRequestPushes', on: u.verifyRequestPushes !== false, title: 'Verify requests', text: 'A push when friends need your verify, at most one every 3 hours' }" />
+            <ng-container *ngTemplateOutlet="switchRow; context: { key: 'proofResultPushes', on: u.proofResultPushes !== false, title: 'Proof results', text: 'When your proof is verified or removed' }" />
             <ng-container *ngTemplateOutlet="switchRow; context: { key: 'commentPushes', on: u.commentPushes !== false, title: 'Comments', text: 'Comments and replies on your posts, grouped per post. At most one alert per post an hour' }" />
+            <ng-container *ngTemplateOutlet="switchRow; context: { key: 'hypePushes', on: u.hypePushes !== false, title: 'Hypes', text: 'When someone hypes your post' }" />
+            <ng-container *ngTemplateOutlet="switchRow; context: { key: 'friendPushes', on: u.friendPushes !== false, title: 'Friend requests', text: 'New friend requests and accepted ones' }" />
           </div>
         </div>
 
@@ -475,6 +482,8 @@ export class SettingsPage {
 
   protected readonly user = this.session.user;
   protected readonly apps = LOCKABLE_APPS;
+  protected readonly healthName = HEALTH_NAME;
+  protected readonly store = computed(() => storeOf(this.user()?.proProductId));
   protected readonly minuteOptions = [15, 30, 45, 60];
   protected readonly themes: { id: Theme; name: string; sub: string }[] = [
     { id: 'NEON', name: 'Neon', sub: 'Default' },
@@ -631,7 +640,7 @@ export class SettingsPage {
   protected async restore(): Promise<void> {
     this.busy.set(true);
     try {
-      this.toast.show((await this.billing.restore()) ? 'PRO restored.' : 'No subscription found on this Google Play account.');
+      this.toast.show((await this.billing.restore()) ? 'PRO restored.' : `No subscription found on this ${STORE.account}.`);
     } catch (e) {
       this.toast.error(e);
     } finally {
@@ -689,7 +698,7 @@ export class SettingsPage {
   protected async toggleFlag(key: Flag): Promise<void> {
     const u = this.user();
     if (!u || this.busy()) return;
-    const on = key === 'verifyRequestPushes' || key === 'commentPushes' ? u[key] !== false : !!u[key];
+    const on = (PUSH_FLAGS as readonly string[]).includes(key) ? u[key] !== false : !!u[key];
     this.busy.set(true);
     try {
       await this.session.update(key === 'shareStats' ? { shareStats: !on, region: this.region.region() } : { [key]: !on });
@@ -731,16 +740,24 @@ export class SettingsPage {
     }
   }
 
+  protected lockAllowed(a: LockableApp, u: User): boolean {
+    return this.lock.allowed(a, u.pro, u.lockedApps);
+  }
+
   protected async toggleApp(a: LockableApp): Promise<void> {
     const u = this.user();
     if (!u) return;
-    if (!a.free && !u.pro) {
+    if (!this.lockAllowed(a, u)) {
       this.paywall();
       return;
     }
     const on = u.lockedApps.includes(a.pkg);
     const packages = on ? u.lockedApps.filter(p => p !== a.pkg) : [...u.lockedApps, a.pkg];
     try {
+      if (this.lock.ios) {
+        if (on) await this.lock.forget(a.pkg);
+        else if (!(await this.lock.ensureApp(a))) return;
+      }
       const updated = await this.api.setLockedApps(packages);
       this.session.setUser(updated);
       await this.syncLock(updated);
@@ -884,7 +901,7 @@ export class SettingsPage {
         const install = await this.prompt.confirm('Install Health Connect', 'Steps and sleep quests sync from Health Connect. Install it from Google Play first.', 'Open Google Play', 'Not now');
         if (install) this.health.openInstall();
       } else if (access !== 'not-now') {
-        this.toast.show(access === 'granted' ? 'Health Connect linked.' : 'Allow steps or sleep access in Health Connect.');
+        this.toast.show(access === 'granted' ? `${HEALTH_NAME} linked.` : `Allow steps or sleep access in ${HEALTH_NAME}.`);
       }
     } catch (e) {
       this.toast.error(e);
@@ -897,7 +914,7 @@ export class SettingsPage {
     const state = this.push.permission() === 'denied' ? 'denied' : await this.push.enable();
     if (state === 'granted') this.toast.show('Notifications are on.');
     else if (state === 'denied') {
-      const open = await this.prompt.confirm('Notifications are off', 'Android blocks DropZone notifications. Open the notification settings and turn them on.', 'Open settings', 'Close');
+      const open = await this.prompt.confirm('Notifications are off', `${OS_NAME} blocks DropZone notifications. Open the notification settings and turn them on.`, 'Open settings', 'Close');
       if (open) await this.openNotificationSettings();
     }
   }

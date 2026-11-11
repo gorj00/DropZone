@@ -14,7 +14,7 @@ public record RevenueCatEvent(Event event) {
 			@JsonProperty("product_id") String productId, @JsonProperty("new_product_id") String newProductId,
 			@JsonProperty("expiration_at_ms") Long expirationAtMs, @JsonProperty("event_timestamp_ms") Long eventTimestampMs,
 			@JsonProperty("grace_period_expiration_at_ms") Long gracePeriodExpirationAtMs, @JsonProperty("cancel_reason") String cancelReason,
-			String environment, @JsonProperty("transferred_to") List<String> transferredTo,
+			String environment, String store, @JsonProperty("transferred_to") List<String> transferredTo,
 			@JsonProperty("transferred_from") List<String> transferredFrom) {
 	}
 }

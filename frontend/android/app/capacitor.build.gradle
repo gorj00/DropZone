@@ -23,6 +23,7 @@ dependencies {
     implementation project(':capgo-capacitor-health')
     implementation project(':capgo-capacitor-social-login')
     implementation project(':revenuecat-purchases-capacitor')
+    implementation project(':capacitor-native-settings')
 
 }
 

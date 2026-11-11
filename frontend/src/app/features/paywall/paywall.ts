@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
 import { QuestType } from '../../core/api/models';
 import { ConfigService, openExternal, playSubscriptionsUrl } from '../../core/config.service';
+import { IS_IOS, STORE, storeOf } from '../../core/platform';
 import { BillingService, PlanId, planLabel, planOf, switchKind } from '../../core/native/billing';
 import { LockService } from '../../core/native/lock';
 import { SessionStore } from '../../core/session.store';
@@ -132,14 +133,14 @@ export function mealRow(catalog: QuestType[], path: string): Row {
           @if (plan(); as p) {
             <div class="mt-3 text-center text-[11.5px] text-mute leading-snug space-y-1" data-test="terms">
               <p><span class="text-ink font-semibold">{{ p.price }} per {{ p.period }}.</span> Renews automatically until you cancel.</p>
-              <p>Billed to your Google Play account.</p>
-              <p>Cancel anytime in Google Play › Payments &amp; subscriptions; PRO stays until the end of the paid period.</p>
+              <p>Billed to your {{ store.account }}.</p>
+              <p>Cancel anytime in {{ store.cancelPath }}; PRO stays until the end of the paid period.</p>
               @if (switchNote(); as note) { <p data-test="switch-note">{{ note }}</p> }
             </div>
           }
         }
         @if (subscribed()) {
-          <button class="block mx-auto mt-3 text-[13px] font-bold text-accent" (click)="manage()">Manage in Google Play</button>
+          <button class="block mx-auto mt-3 text-[13px] font-bold text-accent" (click)="manage()">Manage in {{ subStore().name }}</button>
         }
         @if (legal()?.termsUrl || legal()?.privacyUrl) {
           <div class="flex justify-center gap-3 mt-3 text-[12px] font-semibold text-mute">
@@ -154,7 +155,7 @@ export function mealRow(catalog: QuestType[], path: string): Row {
       <div class="fixed inset-0 z-50 grid place-items-center bg-[rgba(5,4,15,.72)] backdrop-blur-sm" role="status" data-test="busy">
         <div class="flex flex-col items-center gap-3 text-center">
           <span class="spin !w-10 !h-10 text-gold" aria-hidden="true"></span>
-          <span class="font-bold text-[15px]">Confirming with Google Play…</span>
+          <span class="font-bold text-[15px]">Confirming with {{ store.name }}…</span>
         </div>
       </div>
     }
@@ -172,6 +173,8 @@ export class PaywallPage {
   private readonly location = inject(Location);
 
   protected readonly apps = LOCKABLE_APPS;
+  protected readonly store = STORE;
+  protected readonly subStore = computed(() => storeOf(this.session.user()?.proProductId));
   protected readonly legal = this.configs.config;
   protected readonly rows = computed<Row[]>(() => [
     { label: 'Daily quests', free: '3 basic', pro: 'All + custom' },
@@ -210,7 +213,7 @@ export class PaywallPage {
     const at = this.session.user()?.pendingPlanAt;
     if (!this.pending() || !next) return null;
     const when = at ? new Date(at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
-    return `Your plan switches to ${next}${when ? ` on ${when}` : ''} when your ${this.currentLabel()} plan renews. To keep ${this.currentLabel()}, cancel the change in Google Play.`;
+    return `Your plan switches to ${next}${when ? ` on ${when}` : ''} when your ${this.currentLabel()} plan renews. To keep ${this.currentLabel()}, cancel the change in ${this.subStore().name}.`;
   });
   protected readonly renewDate = computed(() => {
     const at = this.session.user()?.proExpiresAt;
@@ -219,6 +222,7 @@ export class PaywallPage {
   protected readonly switchNote = computed(() => {
     const p = this.plan();
     if (!p || !this.switching()) return null;
+    if (IS_IOS) return 'The App Store applies the change: upgrades start now, downgrades at your next renewal.';
     if (switchKind(this.session.user()?.proProductId, p.id) === 'now') {
       return `Switches now. Google Play charges ${p.price} today and adds your unused ${this.currentLabel()} days on top.`;
     }
@@ -267,10 +271,10 @@ export class PaywallPage {
         this.toast.show(`Your plan switches to ${this.plan()!.label}${when ? ` on ${when}` : ' at your next renewal'}.`);
         this.close();
       } else if (result === 'done') {
-        this.toast.show(switching ? 'Plan changed. Google Play has the details.' : 'Welcome to PRO. Every quest is yours.');
+        this.toast.show(switching ? `Plan changed. ${STORE.title} has the details.` : 'Welcome to PRO. Every quest is yours.');
         this.close();
       } else if (result === 'pending') {
-        this.toast.show('Purchase received. PRO turns on as soon as Google Play confirms it.');
+        this.toast.show(`Purchase received. PRO turns on as soon as ${STORE.name} confirms it.`);
       }
     } catch (e) {
       this.toast.error(e);
@@ -286,7 +290,7 @@ export class PaywallPage {
         this.toast.show('PRO restored.');
         this.close();
       } else {
-        this.toast.show('No subscription found on this Google Play account.');
+        this.toast.show(`No subscription found on this ${STORE.account}.`);
       }
     } catch (e) {
       this.toast.error(e);

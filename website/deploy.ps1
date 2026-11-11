@@ -8,6 +8,7 @@ $Site = $PSScriptRoot
 
 $types = @{ '.html' = 'text/html; charset=utf-8'; '.css' = 'text/css; charset=utf-8'; '.json' = 'application/json'; '.png' = 'image/png'; '.jpg' = 'image/jpeg'; '.mp4' = 'video/mp4' }
 $cache = @{ '.html' = 'no-cache'; '.json' = 'public, max-age=300'; '.css' = 'public, max-age=3600'; '.png' = 'public, max-age=86400'; '.jpg' = 'public, max-age=86400'; '.mp4' = 'public, max-age=604800' }
+$noExtension = @{ 'apple-app-site-association' = 'application/json' }
 
 gcloud storage buckets describe "gs://$Bucket" --project $Project *> $null
 if ($LASTEXITCODE -ne 0) {
@@ -18,13 +19,15 @@ if ($LASTEXITCODE -ne 0) {
 }
 gcloud storage buckets update "gs://$Bucket" --web-main-page-suffix index.html --web-error-page 404.html
 
-Get-ChildItem $Site -Recurse -File -Force | Where-Object { $types.ContainsKey($_.Extension) } | ForEach-Object {
+Get-ChildItem $Site -Recurse -File -Force | Where-Object { $types.ContainsKey($_.Extension) -or $noExtension.ContainsKey($_.Name) } | ForEach-Object {
     $path = $_.FullName.Substring($Site.Length + 1).Replace('\', '/')
     if ($_.Extension -eq '.html' -and (Select-String -Path $_.FullName -Pattern 'data-draft' -Quiet)) {
         Write-Host "skipped draft $path"
         return
     }
-    gcloud storage cp $_.FullName "gs://$Bucket/$path" --content-type $types[$_.Extension] --cache-control $cache[$_.Extension] --quiet
+    $contentType = if ($_.Extension) { $types[$_.Extension] } else { $noExtension[$_.Name] }
+    $cacheControl = if ($_.Extension) { $cache[$_.Extension] } else { $cache['.json'] }
+    gcloud storage cp $_.FullName "gs://$Bucket/$path" --content-type $contentType --cache-control $cacheControl --quiet
 }
 
 Write-Host "Website deployed to https://$Bucket"

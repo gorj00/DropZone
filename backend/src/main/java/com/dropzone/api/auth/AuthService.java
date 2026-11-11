@@ -6,6 +6,7 @@ import com.dropzone.api.config.AppProperties;
 import com.dropzone.api.domain.User;
 import com.dropzone.api.domain.UserRepository;
 import com.dropzone.api.user.UserService;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -17,14 +18,18 @@ public class AuthService {
 	private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
 	private final GoogleTokenVerifier googleVerifier;
+	private final AppleTokenVerifier appleVerifier;
+	private final AppleTokenClient appleTokens;
 	private final UserRepository users;
 	private final UserService userService;
 	private final JwtService jwtService;
 	private final AppProperties props;
 
-	public AuthService(GoogleTokenVerifier googleVerifier, UserRepository users, UserService userService, JwtService jwtService,
-			AppProperties props) {
+	public AuthService(GoogleTokenVerifier googleVerifier, AppleTokenVerifier appleVerifier, AppleTokenClient appleTokens, UserRepository users,
+			UserService userService, JwtService jwtService, AppProperties props) {
 		this.googleVerifier = googleVerifier;
+		this.appleVerifier = appleVerifier;
+		this.appleTokens = appleTokens;
 		this.users = users;
 		this.userService = userService;
 		this.jwtService = jwtService;
@@ -77,6 +82,36 @@ public class AuthService {
 			}
 			else {
 				user.email = email;
+			}
+		}
+		return new AuthResponse(jwtService.issue(user), userService.toDto(user));
+	}
+
+	@Transactional
+	public AuthResponse apple(String idToken, String name, String authorizationCode) {
+		AppleTokenVerifier.AppleIdentity identity = appleVerifier.verify(idToken);
+		if (identity.subject() == null || identity.subject().isBlank()) {
+			throw ApiException.unauthorized("Invalid Apple token");
+		}
+		User user = users.findByAppleSub(identity.subject()).orElse(null);
+		if (user == null) {
+			if (identity.email() == null || identity.email().isBlank() || !identity.emailVerified()) {
+				throw ApiException.unauthorized("Apple did not share a verified e-mail");
+			}
+			String email = UserService.normalizeEmail(identity.email());
+			user = users.findByEmail(email).orElse(null);
+			if (user == null) {
+				user = userService.create(email, name, null, null);
+			}
+			else if (user.appleSub != null) {
+				throw ApiException.conflict("This account is already linked to another Apple account");
+			}
+			user.appleSub = identity.subject();
+		}
+		if (authorizationCode != null && !authorizationCode.isBlank()) {
+			Optional<String> refreshToken = appleTokens.refreshToken(authorizationCode);
+			if (refreshToken.isPresent()) {
+				user.appleRefreshToken = refreshToken.get();
 			}
 		}
 		return new AuthResponse(jwtService.issue(user), userService.toDto(user));

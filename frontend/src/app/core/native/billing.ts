@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 import { ApiService } from '../api/api.service';
 import { User } from '../api/models';
 import { subscriptionId } from '../config.service';
+import { IS_IOS, STORE, storeOf } from '../platform';
 import { SessionStore } from '../session.store';
 
 export type PlanId = 'pro_weekly' | 'pro_monthly' | 'pro_yearly';
@@ -30,7 +31,7 @@ export interface PurchasesBridge {
 
 export const PURCHASES = new InjectionToken<PurchasesBridge>('Purchases', {
   providedIn: 'root',
-  factory: () => ({ native: Capacitor.isNativePlatform(), apiKey: environment.revenueCatApiKey, sdk: Purchases })
+  factory: () => ({ native: Capacitor.isNativePlatform(), apiKey: IS_IOS ? environment.revenueCatIosApiKey : environment.revenueCatApiKey, sdk: Purchases })
 });
 
 export const ENTITLEMENT = 'pro';
@@ -96,7 +97,8 @@ export const OTHER_ACCOUNT_MESSAGE = 'This subscription belongs to another DropZ
 const OTHER_ACCOUNT_CODES = ['7', '13', '40', 'RECEIPT_ALREADY_IN_USE_ERROR', 'RECEIPT_IN_USE_BY_OTHER_SUBSCRIBER_ERROR', 'PURCHASE_BELONGS_TO_OTHER_USER'];
 const ALREADY_PURCHASED_CODES = ['6', 'PRODUCT_ALREADY_PURCHASED_ERROR'];
 const NOT_ALLOWED_CODES = ['3', 'PURCHASE_NOT_ALLOWED_ERROR'];
-export const PAYMENT_FAILED_MESSAGE = 'The payment didn’t go through. Check your payment method in Google Play and try again.';
+export const PAYMENT_FAILED_MESSAGE = `The payment didn’t go through. Check your payment method in ${STORE.name} and try again.`;
+export const OTHER_STORE_MESSAGE = 'Your PRO was bought on Google Play. Manage or change it there.';
 
 function rcCodes(e: unknown): string[] {
   const err = e as { code?: unknown; readableErrorCode?: unknown; userInfo?: { readableErrorCode?: unknown } } | null;
@@ -193,10 +195,11 @@ export class BillingService {
     if (!this.bridge.native) throw new Error('Purchases are available in the Android app.');
     if (!this.enabled || !plan?.pkg) throw new Error('Subscriptions are not available yet. Try again later.');
     const user = this.session.user();
+    if (subscribed(user) && storeOf(user?.proProductId) !== STORE) throw new Error(OTHER_STORE_MESSAGE);
     const current = subscribed(user) ? subscriptionId(user?.proProductId) : null;
     const kind = current ? switchKind(user?.proProductId, id) : null;
     const mode = kind === 'now' ? STORE_REPLACEMENT_MODE.CHARGE_FULL_PRICE : STORE_REPLACEMENT_MODE.DEFERRED;
-    const change = current && kind ? { storeProductChangeInfo: { oldProductIdentifier: current, replacementMode: mode } } : {};
+    const change = !IS_IOS && current && kind ? { storeProductChangeInfo: { oldProductIdentifier: current, replacementMode: mode } } : {};
     let info: CustomerInfo;
     try {
       info = (await this.bridge.sdk.purchasePackage({ aPackage: plan.pkg, ...change })).customerInfo;

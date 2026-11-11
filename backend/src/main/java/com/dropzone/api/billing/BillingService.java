@@ -21,6 +21,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -40,6 +41,9 @@ public class BillingService {
 	static final Duration RECONCILE_AFTER_EXPIRY = Duration.ofDays(3);
 	static final Duration HOLD_MAX = Duration.ofDays(60);
 	static final String PLAY_PACKAGE = "com.dropzone.app";
+	static final String APP_STORE = "APP_STORE";
+	static final String PLAY_STORE = "PLAY_STORE";
+	static final String APPLE_SUBSCRIPTIONS_URL = "https://apps.apple.com/account/subscriptions";
 	public static final String PAYWALL = "/paywall";
 	static final String PRO_ENDED_SCREEN = "/pro-ended";
 
@@ -251,6 +255,7 @@ public class BillingService {
 		user.billingHold = hold && !user.pro;
 		if (e.productId() != null) {
 			user.proProductId = e.productId();
+			rememberStore(user, e.store());
 		}
 		if (!user.pro || e.billingIssueAt() == null) {
 			user.billingIssueAt = null;
@@ -269,6 +274,7 @@ public class BillingService {
 			String product = event.newProductId() != null ? event.newProductId() : event.productId();
 			if (product != null) {
 				user.proProductId = product;
+				rememberStore(user, event.store());
 			}
 			user.billingHold = false;
 			if (RENEWING.contains(type)) {
@@ -333,8 +339,9 @@ public class BillingService {
 			user.proEndedAt = user.proExpiresAt != null && user.proExpiresAt.isBefore(now) ? user.proExpiresAt : now;
 			if (user.billingHold) {
 				message(user, NotificationType.BILLING_ISSUE, PushType.BILLING_ISSUE, "PRO is on hold",
-						"Google Play couldn't charge you, so PRO is paused. Fix your payment in Google Play and PRO comes back on its own.",
-						Map.of("link", playSubscriptionUrl(user.proProductId)));
+						storeTitle(user) + " couldn't charge you, so PRO is paused. Fix your payment in " + storeName(user)
+								+ " and PRO comes back on its own.",
+						Map.of("link", subscriptionUrl(user)));
 			}
 			else {
 				message(user, NotificationType.PRO_ENDED, PushType.PRO_ENDED, "Your PRO subscription ended",
@@ -349,8 +356,8 @@ public class BillingService {
 		}
 		if (issueBefore == null && user.billingIssueAt != null) {
 			message(user, NotificationType.BILLING_ISSUE, PushType.BILLING_ISSUE, "Payment problem",
-					"Google Play couldn't renew DropZone PRO. Update your payment method to keep PRO.",
-					Map.of("link", playSubscriptionUrl(user.proProductId)));
+					storeTitle(user) + " couldn't renew DropZone PRO. Update your payment method to keep PRO.",
+					Map.of("link", subscriptionUrl(user)));
 		}
 		if (subscribed) {
 			user.proEndAckAt = null;
@@ -361,6 +368,32 @@ public class BillingService {
 	private void message(User user, NotificationType type, PushType pushType, String title, String body, Map<String, String> data) {
 		notifications.notify(user.id, type, null, null, null, null, body);
 		push.notify(user, pushType, title, body, data);
+	}
+
+	private static void rememberStore(User user, String store) {
+		if (store == null) {
+			return;
+		}
+		String normalized = store.trim().toUpperCase(Locale.ROOT);
+		if (APP_STORE.equals(normalized) || PLAY_STORE.equals(normalized)) {
+			user.proStore = normalized;
+		}
+	}
+
+	static boolean appStore(User user) {
+		return APP_STORE.equals(user.proStore);
+	}
+
+	private static String storeTitle(User user) {
+		return appStore(user) ? "The App Store" : "Google Play";
+	}
+
+	private static String storeName(User user) {
+		return appStore(user) ? "the App Store" : "Google Play";
+	}
+
+	static String subscriptionUrl(User user) {
+		return appStore(user) ? APPLE_SUBSCRIPTIONS_URL : playSubscriptionUrl(user.proProductId);
 	}
 
 	public static String playSubscriptionUrl(String productId) {

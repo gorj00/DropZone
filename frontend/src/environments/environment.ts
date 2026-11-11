@@ -3,7 +3,9 @@ export const environment = {
   apiUrl: 'http://localhost:8080/api/v1',
   androidApiUrl: 'http://10.0.2.2:8080/api/v1',
   googleWebClientId: '',
+  googleIosClientId: '',
   revenueCatApiKey: '',
+  revenueCatIosApiKey: '',
   devLoginPath: '/auth/dev' as string | null,
   inviteBaseUrl: 'https://dropzone.mobi/invite/'
 };

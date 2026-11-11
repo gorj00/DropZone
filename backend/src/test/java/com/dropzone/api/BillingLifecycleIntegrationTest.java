@@ -29,11 +29,15 @@ class BillingLifecycleIntegrationTest extends IntegrationTest {
 	BillingService billing;
 
 	private void send(String id, String type, Session user, Instant at, Instant expires, String extra) throws Exception {
+		send(id, type, user, at, expires, extra, "PLAY_STORE");
+	}
+
+	private void send(String id, String type, Session user, Instant at, Instant expires, String extra, String store) throws Exception {
 		String json = """
 				{"api_version":"1.0","event":{"id":"%s","type":"%s","app_user_id":"%s","original_app_user_id":"%s","aliases":["%s"],
-				 "entitlement_ids":["pro"],"product_id":"%s","period_type":"NORMAL","store":"PLAY_STORE","environment":"SANDBOX",
+				 "entitlement_ids":["pro"],"product_id":"%s","period_type":"NORMAL","store":"%s","environment":"SANDBOX",
 				 "event_timestamp_ms":%d,"expiration_at_ms":%s%s}}
-				""".formatted(id, type, user.id(), user.id(), user.id(), MONTHLY, at.toEpochMilli(),
+				""".formatted(id, type, user.id(), user.id(), user.id(), MONTHLY, store, at.toEpochMilli(),
 				expires == null ? "null" : String.valueOf(expires.toEpochMilli()), extra == null ? "" : "," + extra);
 		mvc.perform(MockMvcRequestBuilders.post("/api/v1/webhooks/revenuecat").header("Authorization", "Bearer test-secret")
 				.contentType(MediaType.APPLICATION_JSON).content(json)).andExpect(status().isOk());
@@ -152,6 +156,24 @@ class BillingLifecycleIntegrationTest extends IntegrationTest {
 
 		send("RENEWAL", user, now(), now().plus(30, ChronoUnit.DAYS));
 		get(user, "/api/v1/me").andExpect(jsonPath("$.pro").value(true)).andExpect(jsonPath("$.billingIssue").value(false));
+	}
+
+	@Test
+	void appStoreBillingIssueNamesTheAppStore() throws Exception {
+		Session user = login("AppStoreIssue");
+		String token = withToken(user);
+		send(UUID.randomUUID().toString(), "INITIAL_PURCHASE", user, now().minus(31, ChronoUnit.DAYS), now().plus(1, ChronoUnit.HOURS), null,
+				"APP_STORE");
+		send(UUID.randomUUID().toString(), "BILLING_ISSUE", user, now().minus(1, ChronoUnit.HOURS), now().plus(1, ChronoUnit.HOURS), null,
+				"APP_STORE");
+
+		assertThat(jdbc.queryForObject("select pro_store from users where id = ?", String.class, user.id())).isEqualTo("APP_STORE");
+		assertThat(jdbc.queryForObject("select text from notifications where user_id = ? and type = 'BILLING_ISSUE'", String.class, user.id()))
+				.isEqualTo("The App Store couldn't renew DropZone PRO. Update your payment method to keep PRO.");
+		assertThat(pushes.toToken(token)).hasSize(1).first().satisfies(push -> {
+			assertThat(push.type()).isEqualTo(PushType.BILLING_ISSUE);
+			assertThat(push.data()).containsEntry("link", "https://apps.apple.com/account/subscriptions");
+		});
 	}
 
 	@Test

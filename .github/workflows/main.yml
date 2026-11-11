@@ -72,9 +72,12 @@ jobs:
       - run: ./gradlew --no-daemon testDebugUnitTest assembleRelease
         working-directory: frontend/android
 
-  deploy-dev:
+  deploy-prod:
     needs: [backend, web, android]
     runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-prod
+      cancel-in-progress: false
     permissions:
       contents: read
       id-token: write
@@ -87,7 +90,7 @@ jobs:
       - uses: google-github-actions/setup-gcloud@v3
       - run: gcloud auth configure-docker europe-west4-docker.pkg.dev --quiet
       - run: |
-          docker build --build-arg "GIT_SHA=$GITHUB_SHA" -t "$IMAGE:$GITHUB_SHA" -t "$IMAGE:dev" backend
-          docker push "$IMAGE:$GITHUB_SHA"
-          docker push "$IMAGE:dev"
-      - run: gcloud run deploy dropzone-api-dev --project "$PROJECT" --region "$REGION" --image "$IMAGE:$GITHUB_SHA" --quiet
+          docker build --build-arg "GIT_SHA=$GITHUB_SHA" -t "$IMAGE:prod-$GITHUB_SHA" -t "$IMAGE:prod" backend
+          docker push "$IMAGE:prod-$GITHUB_SHA"
+          docker push "$IMAGE:prod"
+      - run: gcloud run deploy dropzone-api --project "$PROJECT" --region "$REGION" --image "$IMAGE:prod-$GITHUB_SHA" --quiet

@@ -7,6 +7,7 @@ export interface AppLockStatus {
   advancedProtection: boolean;
   minutesUsed: number;
   minutesLeft: number;
+  pickedPackages?: string[];
 }
 
 export interface AppLockConfig {
@@ -24,6 +25,9 @@ export interface AppLockPlugin {
   openAccessibilitySettings(options?: { guide?: boolean }): Promise<void>;
   openOverlaySettings(): Promise<void>;
   setConfig(config: AppLockConfig): Promise<void>;
+  requestAuthorization(): Promise<{ granted: boolean }>;
+  pickApp(options: { package: string; name: string }): Promise<{ picked: boolean }>;
+  forgetApp(options: { package: string }): Promise<void>;
 }
 
 export const AppLock = registerPlugin<AppLockPlugin>('AppLock', {
@@ -31,7 +35,6 @@ export const AppLock = registerPlugin<AppLockPlugin>('AppLock', {
 });
 
 export interface AppSettingsPlugin {
-  openNotificationSettings(): Promise<void>;
   setIconTheme(options: { theme: 'NEON' | 'STEALTH' }): Promise<void>;
   getRegion(): Promise<{ sim: string; network: string; locale: string }>;
 }

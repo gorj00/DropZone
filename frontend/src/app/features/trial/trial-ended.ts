@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { openExternal, playSubscriptionsUrl } from '../../core/config.service';
+import { IS_IOS, storeOf } from '../../core/platform';
 import { SessionStore } from '../../core/session.store';
 import { ThemeService } from '../../core/theme.service';
 import { ToastService } from '../../core/toast.service';
@@ -48,7 +49,7 @@ import { Icon } from '../../ui/icon';
 
       <div class="mt-auto pad pt-5">
         @if (hold()) {
-          <button class="btn btn-gold" [disabled]="busy()" (click)="fixPayment()"><app-icon name="coins" />Fix payment in Google Play</button>
+          <button class="btn btn-gold" [disabled]="busy()" (click)="fixPayment()"><app-icon name="coins" />Fix payment in {{ store().name }}</button>
         } @else {
           <button class="btn btn-gold" [disabled]="busy()" (click)="plans()"><app-icon name="crown" />See plans</button>
         }
@@ -67,16 +68,17 @@ export class TrialEndedPage {
   protected readonly apps = LOCKABLE_APPS.filter(a => !a.free);
   protected readonly keep = [
     { icon: 'target', title: 'Every quest + your own' },
-    { icon: 'lock', title: 'TikTok, YouTube & Snapchat locks', apps: true },
+    { icon: 'lock', title: IS_IOS ? 'Locks for all 4 apps' : 'TikTok, YouTube & Snapchat locks', apps: true },
     { icon: 'timer', title: 'Minutes unlock' },
     { icon: 'chart', title: 'Slip-ups & heat maps' },
     { icon: 'users', title: 'Community, Friends check & shared milestones' }
   ];
 
   protected readonly pro = inject(ActivatedRoute).snapshot.data['kind'] === 'PRO';
+  protected readonly store = computed(() => storeOf(this.session.user()?.proProductId));
   protected readonly hold = computed(() => this.pro && !!this.session.user()?.billingHold);
   protected readonly copy = computed(() => {
-    if (this.hold()) return { icon: 'coins', title: 'is on hold', text: 'Google Play couldn’t charge you. Fix your payment in Google Play and PRO comes back on its own.' };
+    if (this.hold()) return { icon: 'coins', title: 'is on hold', text: `${this.store().title} couldn’t charge you. Fix your payment in ${this.store().name} and PRO comes back on its own.` };
     return this.pro
       ? { icon: 'crown', title: 'subscription ended', text: 'Resubscribe to keep everything PRO, or carry on with the free plan.' }
       : { icon: 'hourglass', title: 'trial has ended', text: 'Keep everything you used this week, or carry on with the free plan.' };

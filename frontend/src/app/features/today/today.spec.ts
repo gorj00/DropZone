@@ -72,7 +72,7 @@ async function renderDay(t: Today, opts: { theme?: 'NEON' | 'STEALTH'; mode?: 'W
     providers: [
       provideRouter([]),
       { provide: ApiService, useValue: { slipUps: vi.fn().mockResolvedValue([]), unreadNotifications: vi.fn().mockResolvedValue({ count: 0 }) } },
-      { provide: LockService, useValue: { native: true, status, refreshStatus, disable: vi.fn().mockResolvedValue(undefined) } },
+      { provide: LockService, useValue: { native: true, status, refreshStatus, incomplete: () => false, disable: vi.fn().mockResolvedValue(undefined) } },
       { provide: TodayStore, useValue: { today, left: computed(() => Math.max(0, (today()?.totalCount ?? 0) - (today()?.doneCount ?? 0))), load: vi.fn().mockResolvedValue(t) } },
       { provide: GoalStore, useValue: { goal: signal(null), active: signal(null), load: vi.fn().mockResolvedValue(null) } },
       { provide: ProofService, useValue: { syncAuto: vi.fn().mockResolvedValue(undefined), isPending: () => false } }

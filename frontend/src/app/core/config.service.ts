@@ -3,6 +3,7 @@ import { App as CapApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { ApiService } from './api/api.service';
 import { AppConfig } from './api/models';
+import { APPLE_SUBSCRIPTIONS_URL, storeOf } from './platform';
 
 export const PLAY_PACKAGE = 'com.dropzone.app';
 export const PLAY_LISTING_URL = `https://play.google.com/store/apps/details?id=${PLAY_PACKAGE}`;
@@ -14,6 +15,7 @@ export function subscriptionId(productId: string | null | undefined): string | n
 }
 
 export function playSubscriptionsUrl(productId?: string | null): string {
+  if (storeOf(productId).apple) return APPLE_SUBSCRIPTIONS_URL;
   const sku = subscriptionId(productId);
   return sku ? `https://play.google.com/store/account/subscriptions?sku=${encodeURIComponent(sku)}&package=${PLAY_PACKAGE}` : PLAY_SUBSCRIPTIONS_URL;
 }

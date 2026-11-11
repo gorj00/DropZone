@@ -8,6 +8,7 @@ import com.dropzone.api.domain.User;
 import com.dropzone.api.domain.UserRepository;
 import com.dropzone.api.push.PushService;
 import com.dropzone.api.push.PushType;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -104,6 +105,35 @@ class PushIntegrationTest extends IntegrationTest {
 		pushes.deadTokens.add(direct);
 		ping(user);
 		assertThat(owner(direct)).isNull();
+	}
+
+	@Test
+	void switchedOffPushTypesAreNotSentButAccountAndTrialPushesAre() throws Exception {
+		Session user = login("QuietPhone");
+		String token = "quiet-" + UUID.randomUUID();
+		register(user, token);
+		String[] switches = { "reminderPushes", "deadlinePushes", "hypePushes", "friendPushes", "proofResultPushes" };
+		for (String key : switches) {
+			get(user, "/api/v1/me").andExpect(jsonPath("$." + key).value(true));
+			patch(user, "/api/v1/me", "{\"%s\":false}".formatted(key)).andExpect(jsonPath("$." + key).value(false));
+		}
+
+		User target = users.findById(user.id()).orElseThrow();
+		for (PushType type : new PushType[] { PushType.DAILY_REMINDER, PushType.DEADLINE_REMINDER, PushType.HYPE, PushType.FRIEND_REQUEST,
+				PushType.FRIEND_ACCEPTED, PushType.VERIFIED, PushType.PROOF_REJECTED }) {
+			push.notify(target, type, "Hi", "Ping", Map.of());
+			push.notifyAll(List.of(user.id()), type, "Hi", "Ping", Map.of());
+		}
+		assertThat(pushes.toToken(token)).isEmpty();
+
+		push.notify(target, PushType.BILLING_ISSUE, "Hi", "Ping", Map.of());
+		push.notify(target, PushType.TRIAL_ENDING, "Hi", "Ping", Map.of());
+		push.notify(target, PushType.COMMENT, "Hi", "Ping", Map.of());
+		assertThat(pushes.toToken(token)).extracting(p -> p.type()).containsExactly(PushType.BILLING_ISSUE, PushType.TRIAL_ENDING, PushType.COMMENT);
+
+		patch(user, "/api/v1/me", "{\"hypePushes\":true}").andExpect(jsonPath("$.hypePushes").value(true));
+		ping(user);
+		assertThat(pushes.toToken(token)).extracting(p -> p.type()).endsWith(PushType.HYPE);
 	}
 
 	@Test

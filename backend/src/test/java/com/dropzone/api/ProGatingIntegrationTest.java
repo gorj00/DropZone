@@ -1,10 +1,13 @@
 package com.dropzone.api;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.ResultActions;
 
 class ProGatingIntegrationTest extends IntegrationTest {
@@ -75,8 +78,78 @@ class ProGatingIntegrationTest extends IntegrationTest {
 				.andExpect(jsonPath("$.topSlipUps[0].name").value("Late snack"));
 	}
 
-	private static void proRequired(ResultActions result) throws Exception {
-		result.andExpect(status().isPaymentRequired())
+	@Test
+	void freeIphoneUsersCanLockAnyOneApp() throws Exception {
+		Session free = login("Iphone");
+		proRequired(from("ios", HttpMethod.POST, free, "/api/v1/onboarding", """
+				{"path":"LOSE","metric":"WEIGHT","unit":"kg","startValue":90,"goalValue":80,"checkpoints":4,"questCodes":["WEIGH_IN"],
+				 "lockedApps":["com.zhiliaoapp.musically","com.google.ios.youtube"]}
+				""")).andExpect(jsonPath("$.message").value("Locking more than one app is a PRO feature"));
+		from("ios", HttpMethod.POST, free, "/api/v1/onboarding", """
+				{"path":"LOSE","metric":"WEIGHT","unit":"kg","startValue":90,"goalValue":80,"checkpoints":4,"questCodes":["WEIGH_IN"],
+				 "lockedApps":["com.zhiliaoapp.musically"]}
+				""").andExpect(status().isOk())
+				.andExpect(jsonPath("$.user.lockedApps.length()").value(1))
+				.andExpect(jsonPath("$.user.lockedApps[0]").value("com.zhiliaoapp.musically"));
+
+		from("iOS", HttpMethod.PUT, free, "/api/v1/me/locked-apps", "{\"packages\":[\"com.google.ios.youtube\"]}")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.lockedApps.length()").value(1))
+				.andExpect(jsonPath("$.lockedApps[0]").value("com.google.ios.youtube"));
+		proRequired(from("ios", HttpMethod.PUT, free, "/api/v1/me/locked-apps",
+				"{\"packages\":[\"com.google.ios.youtube\",\"com.instagram.android\"]}"))
+				.andExpect(jsonPath("$.message").value("Locking more than one app is a PRO feature"));
+		from("ios", HttpMethod.GET, free, "/api/v1/me", null).andExpect(status().isOk())
+				.andExpect(jsonPath("$.lockedApps.length()").value(1))
+				.andExpect(jsonPath("$.lockedApps[0]").value("com.google.ios.youtube"));
+
+		get(free, "/api/v1/me").andExpect(status().isOk()).andExpect(jsonPath("$.lockedApps.length()").value(0));
+		from("android", HttpMethod.GET, free, "/api/v1/me", null).andExpect(jsonPath("$.lockedApps.length()").value(0));
+		from("web", HttpMethod.GET, free, "/api/v1/me", null).andExpect(jsonPath("$.lockedApps.length()").value(0));
+		for (String platform : new String[] { null, "android", "web", "ipados" }) {
+			proRequired(from(platform, HttpMethod.PUT, free, "/api/v1/me/locked-apps", "{\"packages\":[\"com.google.ios.youtube\"]}"))
+					.andExpect(jsonPath("$.message").value("Locking apps other than Instagram is a PRO feature"));
+		}
+		from("ios", HttpMethod.PUT, free, "/api/v1/me/locked-apps", "{\"packages\":[]}").andExpect(status().isOk())
+				.andExpect(jsonPath("$.lockedApps.length()").value(0));
+	}
+
+	@Test
+	void exProIphoneUsersKeepOneLockedApp() throws Exception {
+		Session session = loginTrial("IphoneTrial");
+		from("ios", HttpMethod.PUT, session, "/api/v1/me/locked-apps",
+				"{\"packages\":[\"com.zhiliaoapp.musically\",\"com.google.ios.youtube\",\"com.burbn.barcelona\"]}")
+				.andExpect(status().isOk()).andExpect(jsonPath("$.lockedApps.length()").value(3));
+		endTrial(session);
+		from("ios", HttpMethod.GET, session, "/api/v1/me", null).andExpect(status().isOk())
+				.andExpect(jsonPath("$.lockedApps.length()").value(1))
+				.andExpect(jsonPath("$.lockedApps[0]").value("com.burbn.barcelona"));
+		get(session, "/api/v1/me").andExpect(jsonPath("$.lockedApps.length()").value(0));
+
+		jdbc.update("insert into user_locked_apps (user_id, package_name) values (?, ?)", session.id(), "com.instagram.android");
+		from("ios", HttpMethod.GET, session, "/api/v1/me", null)
+				.andExpect(jsonPath("$.lockedApps.length()").value(1))
+				.andExpect(jsonPath("$.lockedApps[0]").value("com.instagram.android"));
+		get(session, "/api/v1/me").andExpect(jsonPath("$.lockedApps.length()").value(1))
+				.andExpect(jsonPath("$.lockedApps[0]").value("com.instagram.android"));
+
+		makePro(session);
+		from("ios", HttpMethod.GET, session, "/api/v1/me", null).andExpect(jsonPath("$.lockedApps.length()").value(4));
+	}
+
+	private ResultActions from(String platform, HttpMethod method, Session session, String url, String json) throws Exception {
+		var builder = request(method, url).header("Authorization", "Bearer " + session.token());
+		if (platform != null) {
+			builder.header("X-Platform", platform);
+		}
+		if (json != null) {
+			builder.contentType(MediaType.APPLICATION_JSON).content(json);
+		}
+		return mvc.perform(builder);
+	}
+
+	private static ResultActions proRequired(ResultActions result) throws Exception {
+		return result.andExpect(status().isPaymentRequired())
 				.andExpect(jsonPath("$.status").value(402))
 				.andExpect(jsonPath("$.code").value("PRO_REQUIRED"));
 	}

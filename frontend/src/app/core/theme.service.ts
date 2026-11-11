@@ -15,7 +15,7 @@ export class ThemeService {
       document.documentElement.dataset['theme'] = t === 'STEALTH' ? 'stealth' : 'neon';
       document.querySelector('meta[name="theme-color"]')?.setAttribute('content', t === 'STEALTH' ? '#08090c' : '#0d0a2b');
       try { localStorage.setItem(KEY, t); } catch { }
-      if (Capacitor.isNativePlatform()) void AppSettings.setIconTheme({ theme: t }).catch(() => undefined);
+      if (Capacitor.getPlatform() === 'android') void AppSettings.setIconTheme({ theme: t }).catch(() => undefined);
     });
   }
 

@@ -9,6 +9,7 @@ import { PhotoLinks } from '../../core/photo-links';
 import { SessionStore } from '../../core/session.store';
 import { NotificationsStore, SocialActions } from '../../core/social';
 import { ToastService } from '../../core/toast.service';
+import { STORE } from '../../core/platform';
 import { Avatar } from '../../ui/bits';
 import { Icon } from '../../ui/icon';
 import { InView, ago } from '../squad/in-view';
@@ -38,7 +39,7 @@ const META: Record<NotificationType, { icon: string; tone: string }> = {
 
 const TITLES: Partial<Record<NotificationType, string>> = {
   TRIAL_ENDED: 'Your PRO trial has ended',
-  BILLING_ISSUE: 'Payment problem — fix it in Google Play to keep PRO',
+  BILLING_ISSUE: `Payment problem — fix it in ${STORE.name} to keep PRO`,
   PRO_ENDED: 'Your PRO subscription ended',
   PRO_BACK: 'Welcome back to PRO',
   LIFETIME_PRO: 'You’ve got PRO for life!'

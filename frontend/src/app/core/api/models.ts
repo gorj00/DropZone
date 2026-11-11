@@ -66,6 +66,11 @@ export interface User {
   hiddenFromLeaderboards?: boolean;
   verifyRequestPushes?: boolean;
   commentPushes?: boolean;
+  reminderPushes?: boolean;
+  deadlinePushes?: boolean;
+  hypePushes?: boolean;
+  friendPushes?: boolean;
+  proofResultPushes?: boolean;
   shareStats?: boolean;
 }
 
@@ -593,7 +598,7 @@ export interface CustomQuestRequest {
   checkAudience?: CheckAudience;
 }
 
-export type UserPatch = Partial<Pick<User, 'displayName' | 'handle' | 'theme' | 'unlockMode' | 'minutesPerQuest' | 'publicByDefault' | 'defaultVerification' | 'slipUpTracking' | 'timezone' | 'weightUnit' | 'lengthUnit' | 'bio' | 'skipRestDays' | 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'verifyRequestPushes' | 'commentPushes' | 'shareStats'>> & { avatarUrl?: string; trialEndAcknowledged?: boolean; proEndAcknowledged?: boolean; region?: { source: string; value: string; eu: boolean } };
+export type UserPatch = Partial<Pick<User, 'displayName' | 'handle' | 'theme' | 'unlockMode' | 'minutesPerQuest' | 'publicByDefault' | 'defaultVerification' | 'slipUpTracking' | 'timezone' | 'weightUnit' | 'lengthUnit' | 'bio' | 'skipRestDays' | 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'verifyRequestPushes' | 'commentPushes' | 'reminderPushes' | 'deadlinePushes' | 'hypePushes' | 'friendPushes' | 'proofResultPushes' | 'shareStats'>> & { avatarUrl?: string; trialEndAcknowledged?: boolean; proEndAcknowledged?: boolean; region?: { source: string; value: string; eu: boolean } };
 
 export type CheckpointPatch = Partial<Pick<Checkpoint, 'rewardTitle' | 'rewardImageUrl' | 'rewardImageCredit' | 'isPublic' | 'visibility' | 'verification' | 'deadline' | 'targetValue'>>;
 

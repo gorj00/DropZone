@@ -9,6 +9,7 @@ import { ScaleUnit } from './native/vision';
 import { isBigJump, proofTolerance, reachesTarget } from './plausibility';
 import { PromptService } from './prompt.service';
 import { SessionStore } from './session.store';
+import { HEALTH_NAME } from './platform';
 import { GoalStore, TodayStore, localDate } from './stores';
 import { ToastService } from './toast.service';
 import { UnitsService } from './units';
@@ -267,7 +268,7 @@ export class ProofService {
       if (install) this.health.openInstall();
       return null;
     }
-    if (access === 'denied') this.toast.show(`Allow ${need} access in Health Connect to sync this quest.`, true);
+    if (access === 'denied') this.toast.show(`Allow ${need} access in ${HEALTH_NAME} to sync this quest.`, true);
     if (access !== 'granted') return null;
     return (need === 'sleep' ? await this.health.sleepMinutes(date) : await this.health.steps(date)) ?? 0;
   }

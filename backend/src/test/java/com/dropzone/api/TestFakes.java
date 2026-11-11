@@ -1,5 +1,7 @@
 package com.dropzone.api;
 
+import com.dropzone.api.auth.AppleTokenClient;
+import com.dropzone.api.auth.AppleTokenVerifier;
 import com.dropzone.api.auth.GoogleTokenVerifier;
 import com.dropzone.api.billing.RevenueCatClient;
 import com.dropzone.api.common.ApiException;
@@ -46,6 +48,18 @@ class TestFakes {
 	@Primary
 	FakeGoogle fakeGoogle() {
 		return new FakeGoogle();
+	}
+
+	@Bean
+	@Primary
+	FakeApple fakeApple() {
+		return new FakeApple();
+	}
+
+	@Bean
+	@Primary
+	FakeAppleTokens fakeAppleTokens() {
+		return new FakeAppleTokens();
 	}
 
 	@Bean
@@ -244,6 +258,49 @@ class TestFakes {
 				throw ApiException.unauthorized("Invalid Google token");
 			}
 			return identity;
+		}
+	}
+
+	static class FakeApple implements AppleTokenVerifier {
+
+		private final Map<String, AppleIdentity> tokens = new ConcurrentHashMap<>();
+
+		String token(String subject, String email, boolean verified) {
+			String token = "apple-" + UUID.randomUUID();
+			tokens.put(token, new AppleIdentity(subject, email, verified));
+			return token;
+		}
+
+		@Override
+		public AppleIdentity verify(String idToken) {
+			AppleIdentity identity = tokens.get(idToken);
+			if (identity == null) {
+				throw ApiException.unauthorized("Invalid Apple token");
+			}
+			return identity;
+		}
+	}
+
+	static class FakeAppleTokens implements AppleTokenClient {
+
+		final Map<String, String> codes = new ConcurrentHashMap<>();
+		final List<String> revoked = new CopyOnWriteArrayList<>();
+
+		String code() {
+			String code = "code-" + UUID.randomUUID();
+			codes.put(code, "refresh-" + UUID.randomUUID());
+			return code;
+		}
+
+		@Override
+		public Optional<String> refreshToken(String authorizationCode) {
+			return Optional.ofNullable(codes.get(authorizationCode));
+		}
+
+		@Override
+		public boolean revoke(String refreshToken) {
+			revoked.add(refreshToken);
+			return true;
 		}
 	}
 

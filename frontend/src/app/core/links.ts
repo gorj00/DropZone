@@ -1,5 +1,6 @@
 import { AppNotification } from './api/models';
 import { playSubscriptionsUrl } from './config.service';
+import { IS_IOS } from './platform';
 
 const REPORT_TARGETS = ['POST', 'COMMENT', 'USER'];
 export const TO_VERIFY_LINK = '/squad?show=verify';
@@ -13,7 +14,7 @@ function appLink(link: unknown, fallback: string): string {
 }
 
 function playLink(link: unknown, productId: string | null | undefined): string {
-  return typeof link === 'string' && link.startsWith('https://play.google.com/') ? link : playSubscriptionsUrl(productId);
+  return !IS_IOS && typeof link === 'string' && link.startsWith('https://play.google.com/') ? link : playSubscriptionsUrl(productId);
 }
 
 export function notificationLink(n: AppNotification, productId?: string | null): string | null {

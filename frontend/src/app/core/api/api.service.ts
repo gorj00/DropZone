@@ -9,6 +9,7 @@ import {
   ReportedItem, ReportTarget, SlipUp, SlipUpType, Stats, Today, TodayQuest, Transformation, TransformationRequest, User, UserPatch,
   UserProfile, UserQuest, UserSummary
 } from './models';
+import { IS_IOS } from '../platform';
 import type { Region } from '../region';
 
 export const API_URL = Capacitor.getPlatform() === 'android' ? environment.androidApiUrl : environment.apiUrl;
@@ -44,6 +45,9 @@ export class ApiService {
   }
 
   loginGoogle(idToken: string) { return this.post<{ token: string; user: User }>('/auth/google', { idToken }); }
+  loginApple(idToken: string, name: string | null, authorizationCode: string | null) {
+    return this.post<{ token: string; user: User }>('/auth/apple', { idToken, name, authorizationCode });
+  }
   loginDev(email: string, displayName: string): Promise<{ token: string; user: User }> {
     const path = environment.production ? null : environment.devLoginPath;
     if (!path) return Promise.reject(new Error('Dev sign-in is not available.'));
@@ -64,7 +68,7 @@ export class ApiService {
   signOutEverywhere() { return this.post<void>('/me/sign-out-everywhere'); }
   deleteAccount() { return this.delete<void>('/me'); }
   updateMe(patch: UserPatch) { return this.patch<User>('/me', patch); }
-  setPushToken(token: string) { return this.put<void>('/me/push-token', { token }); }
+  setPushToken(token: string) { return this.put<void>('/me/push-token', IS_IOS ? { token, platform: 'IOS' } : { token }); }
   removePushToken(token: string) { return firstValueFrom(this.http.delete<void>(this.base + '/me/push-token', { body: { token } })); }
   setLockedApps(packages: string[]) { return this.put<User>('/me/locked-apps', { packages }); }
   refreshBilling() { return this.post<User>('/billing/refresh'); }

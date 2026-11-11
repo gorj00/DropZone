@@ -34,6 +34,10 @@ public class User {
 
 	public String googleSub;
 
+	public String appleSub;
+
+	public String appleRefreshToken;
+
 	@Column(nullable = false)
 	public String displayName;
 
@@ -66,6 +70,8 @@ public class User {
 	public boolean willRenew;
 
 	public String proProductId;
+
+	public String proStore;
 
 	public Instant billingIssueAt;
 
@@ -142,6 +148,16 @@ public class User {
 	public boolean verifyRequestPushes = true;
 
 	public boolean commentPushes = true;
+
+	public boolean reminderPushes = true;
+
+	public boolean deadlinePushes = true;
+
+	public boolean hypePushes = true;
+
+	public boolean friendPushes = true;
+
+	public boolean proofResultPushes = true;
 
 	public boolean shareStats;
 

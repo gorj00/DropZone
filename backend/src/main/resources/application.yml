@@ -32,6 +32,10 @@ dropzone:
     jwt-secret: ${JWT_SECRET:}
     jwt-ttl-days: 7
     google-client-ids: ${GOOGLE_CLIENT_IDS:}
+    apple-client-ids: ${APPLE_CLIENT_IDS:com.dropzone.app}
+    apple-team-id: ${APPLE_TEAM_ID:}
+    apple-key-id: ${APPLE_KEY_ID:}
+    apple-private-key: ${APPLE_PRIVATE_KEY:}
     dev-login: ${DEV_LOGIN:false}
   storage:
     bucket: ${GCS_BUCKET:dropzone-local}

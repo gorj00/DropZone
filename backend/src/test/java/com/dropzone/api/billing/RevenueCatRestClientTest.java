@@ -64,12 +64,13 @@ class RevenueCatRestClientTest {
 		body = """
 				{"subscriber":{"entitlements":{"pro":{"expires_date":"2030-01-01T00:00:00Z","grace_period_expires_date":"2030-01-04T00:00:00Z",
 				 "product_identifier":"dropzone_pro:monthly"}},
-				 "subscriptions":{"dropzone_pro:monthly":{"unsubscribe_detected_at":"2029-12-30T00:00:00Z","billing_issues_detected_at":"2029-12-31T00:00:00Z"}}}}""";
+				 "subscriptions":{"dropzone_pro:monthly":{"store":"app_store","unsubscribe_detected_at":"2029-12-30T00:00:00Z","billing_issues_detected_at":"2029-12-31T00:00:00Z"}}}}""";
 		RevenueCatClient.Entitlement grace = client(Duration.ofSeconds(2)).entitlement("u1", "pro").orElseThrow();
 		assertThat(grace.expiresAt()).hasToString("2030-01-04T00:00:00Z");
 		assertThat(grace.productId()).isEqualTo("dropzone_pro:monthly");
 		assertThat(grace.willRenew()).isTrue();
 		assertThat(grace.billingIssueAt()).hasToString("2029-12-31T00:00:00Z");
+		assertThat(grace.store()).isEqualTo("app_store");
 
 		body = """
 				{"subscriber":{"entitlements":{"pro":{"expires_date":"2030-01-01T00:00:00Z","product_identifier":"dropzone_pro:monthly"}},

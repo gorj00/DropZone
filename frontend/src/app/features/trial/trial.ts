@@ -4,6 +4,7 @@ import { SessionStore } from '../../core/session.store';
 import { ThemeService } from '../../core/theme.service';
 import { trialEnd, trialLeft } from '../../core/trial';
 import { AppTile, LOCKABLE_APPS } from '../../ui/app-tile';
+import { IS_IOS } from '../../core/platform';
 import { Badge } from '../../ui/badge';
 import { ProTag } from '../../ui/bits';
 import { Icon } from '../../ui/icon';
@@ -78,7 +79,7 @@ export class TrialPage {
   protected readonly apps = LOCKABLE_APPS.filter(a => !a.free);
   protected readonly perks: Perk[] = [
     { icon: 'target', title: 'Every quest + your own', text: 'The full quest list and custom quests' },
-    { icon: 'lock', title: 'Lock more apps', text: 'TikTok, YouTube and Snapchat too', apps: true },
+    { icon: 'lock', title: 'Lock more apps', text: IS_IOS ? 'All 4 apps, not just one' : 'TikTok, YouTube and Snapchat too', apps: true },
     { icon: 'timer', title: 'Minutes unlock', text: 'Earn screen time per quest' },
     { icon: 'chart', title: 'Slip-ups & heat maps', text: 'See your patterns month by month' },
     { icon: 'users', title: 'Community & verification', text: 'Friends, hypes, leaderboards, shared milestones' }

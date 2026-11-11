@@ -7,7 +7,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record AppProperties(Auth auth, Storage storage, Push push, Billing billing, Photos photos, Cors cors, Legal legal, App app,
 		Jobs jobs, String inviteBaseUrl, List<String> adminEmails) {
 
-	public record Auth(String jwtSecret, int jwtTtlDays, List<String> googleClientIds, boolean devLogin) {
+	public record Auth(String jwtSecret, int jwtTtlDays, List<String> googleClientIds, List<String> appleClientIds, String appleTeamId,
+			String appleKeyId, String applePrivateKey, boolean devLogin) {
 	}
 
 	public record Storage(String bucket, String endpoint, String publicBaseUrl, boolean createBucket, String projectId) {

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { STORE } from '../../core/platform';
 import { ThemeService } from '../../core/theme.service';
 import { Badge } from '../../ui/badge';
 import { Icon } from '../../ui/icon';
@@ -27,13 +28,14 @@ import { Icon } from '../../ui/icon';
           }
         </div>
         <a class="btn btn-gold mt-4 !h-[50px]" routerLink="/paywall">Go PRO</a>
-        <p class="text-center text-[12px] text-mute mt-2.5">Cancel anytime in Google Play</p>
+        <p class="text-center text-[12px] text-mute mt-2.5">Cancel anytime in {{ store.name }}</p>
       </div>
     </div>
   `
 })
 export class ProLock {
   protected readonly theme = inject(ThemeService);
+  protected readonly store = STORE;
   readonly section = input('');
   readonly title = input.required<string>();
   readonly text = input('');

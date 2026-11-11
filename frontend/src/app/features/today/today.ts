@@ -3,6 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api/api.service';
 import { SlipUp, TodayQuest } from '../../core/api/models';
 import { openExternal, playSubscriptionsUrl } from '../../core/config.service';
+import { HEALTH_NAME, storeOf } from '../../core/platform';
 import { LockService } from '../../core/native/lock';
 import { PendingProofs } from '../../core/pending-proof';
 import { PromptService } from '../../core/prompt.service';
@@ -91,7 +92,7 @@ export function dayLabel(d: Date): string {
       @if (user()?.billingIssue || user()?.billingHold) {
         <button class="mx-5 mt-3 w-[calc(100%-40px)] card-gold p-3.5 flex items-center gap-3 text-left" (click)="fixPayment()">
           <span class="qi bg-[rgba(var(--gold-rgb),.12)] text-gold"><app-icon name="coins" /></span>
-          <span class="flex-1 min-w-0 font-bold text-[14px] leading-snug">{{ user()?.billingHold ? 'PRO is on hold — fix your payment in Google Play to get it back' : 'Payment problem — fix it in Google Play to keep PRO' }}</span>
+          <span class="flex-1 min-w-0 font-bold text-[14px] leading-snug">{{ user()?.billingHold ? 'PRO is on hold — fix your payment in ' + payStore().name + ' to get it back' : 'Payment problem — fix it in ' + payStore().name + ' to keep PRO' }}</span>
           <span class="qbtn soft">Fix</span>
         </button>
       }
@@ -171,7 +172,7 @@ export function dayLabel(d: Date): string {
             <span class="qi bg-[rgba(var(--gold-rgb),.12)] text-gold"><app-icon name="lock" /></span>
             <div class="flex-1 min-w-0">
               <div class="font-bold text-[14.5px]">App lock is off — turn it on</div>
-              <p class="text-[12.5px] text-mute leading-snug mt-0.5">Your apps aren't locked right now. Allow DropZone in Accessibility again.</p>
+              <p class="text-[12.5px] text-mute leading-snug mt-0.5">{{ lockOffText }}</p>
             </div>
             <button class="qbtn soft" (click)="enableLock()">Enable</button>
           </div>
@@ -322,8 +323,13 @@ export class TodayPage implements OnInit {
   protected readonly dateLabel = signal(dayLabel(new Date()));
   protected readonly lockOff = computed(() => {
     const s = this.lock.status();
-    return this.lock.native && !!s && !s.serviceEnabled && !s.advancedProtection && (this.user()?.lockedApps.length ?? 0) > 0;
+    const apps = this.user()?.lockedApps ?? [];
+    return this.lock.native && !!s && !s.advancedProtection && apps.length > 0 && (!s.serviceEnabled || this.lock.incomplete(apps));
   });
+  protected readonly lockOffText = this.lock.ios
+    ? "Your apps aren't locked right now. Allow Screen Time access and pick your apps again."
+    : "Your apps aren't locked right now. Allow DropZone in Accessibility again.";
+  protected readonly payStore = computed(() => storeOf(this.user()?.proProductId));
 
   protected readonly streak = computed(() => this.store.today()?.streak ?? this.user()?.streak ?? 0);
   protected readonly minutesMode = computed(() => this.user()?.unlockMode === 'MINUTES');
@@ -422,6 +428,12 @@ export class TodayPage implements OnInit {
 
   protected async enableLock(): Promise<void> {
     try {
+      if (this.lock.ios) {
+        const user = this.user();
+        const apps = LOCKABLE_APPS.filter(a => user?.lockedApps.includes(a.pkg));
+        if (await this.lock.ensureApps(apps)) await this.lock.sync(user, this.store.today());
+        return;
+      }
       await this.lock.openSettings();
     } catch (e) {
       this.toast.error(e);
@@ -510,8 +522,8 @@ export class TodayPage implements OnInit {
   }
 
   protected autoText(tq: TodayQuest): string {
-    if (tq.progress === null) return 'Tap to sync Health Connect';
-    if (tq.quest.autoSource === 'SLEEP') return `${Math.floor(tq.progress / 60)} h ${Math.round(tq.progress % 60)} min${tq.target ? ` of ${hours(tq.target)} h` : ''} · Health Connect`;
-    return `${tq.progress.toLocaleString('en-US')}${tq.target ? ` / ${tq.target.toLocaleString('en-US')}` : ''} · Health Connect`;
+    if (tq.progress === null) return `Tap to sync ${HEALTH_NAME}`;
+    if (tq.quest.autoSource === 'SLEEP') return `${Math.floor(tq.progress / 60)} h ${Math.round(tq.progress % 60)} min${tq.target ? ` of ${hours(tq.target)} h` : ''} · ${HEALTH_NAME}`;
+    return `${tq.progress.toLocaleString('en-US')}${tq.target ? ` / ${tq.target.toLocaleString('en-US')}` : ''} · ${HEALTH_NAME}`;
   }
 }

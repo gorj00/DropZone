@@ -50,8 +50,19 @@ public class PushService {
 		tokens.deleteByUserId(userId);
 	}
 
+	private static boolean wanted(User user, PushType type) {
+		return switch (type) {
+			case DAILY_REMINDER -> user.reminderPushes;
+			case DEADLINE_REMINDER -> user.deadlinePushes;
+			case HYPE -> user.hypePushes;
+			case FRIEND_REQUEST, FRIEND_ACCEPTED -> user.friendPushes;
+			case VERIFIED, PROOF_REJECTED -> user.proofResultPushes;
+			default -> true;
+		};
+	}
+
 	public void notify(User target, PushType type, String title, String body, Map<String, String> extra) {
-		if (target == null) {
+		if (target == null || !wanted(target, type)) {
 			return;
 		}
 		send(target.id, tokens.findByUserId(target.id), type, title, body, extra);
@@ -71,7 +82,9 @@ public class PushService {
 		Map<UUID, List<PushToken>> byUser = tokens.findByUserIdIn(targets.stream().map(u -> u.id).toList()).stream()
 				.collect(Collectors.groupingBy(t -> t.userId));
 		for (User user : targets) {
-			send(user.id, byUser.getOrDefault(user.id, List.of()), type, title, body, extra);
+			if (wanted(user, type)) {
+				send(user.id, byUser.getOrDefault(user.id, List.of()), type, title, body, extra);
+			}
 		}
 	}
 

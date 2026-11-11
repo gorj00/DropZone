@@ -43,7 +43,8 @@ public record DataExport(Instant exportedAt, Profile profile, List<GoalEntry> go
 			int streak, int bestStreak, String inviteCode, Instant createdAt, Instant lastSeenAt, boolean pro, Instant proExpiresAt,
 			String proProductId, Instant trialEndsAt, String termsVersion, String privacyVersion, Instant termsAcceptedAt,
 			Instant ageConfirmedAt, boolean hiddenFromSearch, boolean hiddenFromLeaderboards, boolean verifyRequestPushes, boolean commentPushes, boolean shareStats,
-			Instant shareStatsAt, String regionSource, String regionValue, Boolean regionEu, Instant regionAt) {
+			Instant shareStatsAt, String regionSource, String regionValue, Boolean regionEu, Instant regionAt, boolean reminderPushes,
+			boolean deadlinePushes, boolean hypePushes, boolean friendPushes, boolean proofResultPushes) {
 	}
 
 	public record ProofEntry(UUID id, ProofKind kind, @Photo String photoUrl, Double value, List<String> mlLabels, String mlText, ProofStatus status,

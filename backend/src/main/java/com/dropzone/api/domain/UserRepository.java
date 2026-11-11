@@ -28,6 +28,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
 	Optional<User> findByGoogleSub(String googleSub);
 
+	Optional<User> findByAppleSub(String appleSub);
+
 	Optional<User> findByInviteCode(String inviteCode);
 
 	boolean existsByHandle(String handle);

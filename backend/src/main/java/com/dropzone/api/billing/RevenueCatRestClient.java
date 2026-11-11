@@ -61,7 +61,7 @@ public class RevenueCatRestClient implements RevenueCatClient {
 			}
 			Entitlement e = toEntitlement(info, response.subscriber().subscriptions());
 			return Optional.of(new Entitlement(e.present(), e.expiresAt(), e.productId(), e.willRenew(), e.billingIssueAt(),
-					renewingPlay(response.subscriber().subscriptions(), Instant.now())));
+					renewingPlay(response.subscriber().subscriptions(), Instant.now()), e.store()));
 		}
 		catch (RestClientException | DateTimeParseException e) {
 			log.warn("RevenueCat refresh failed: {}", e.getMessage());
@@ -134,7 +134,7 @@ public class RevenueCatRestClient implements RevenueCatClient {
 		}
 		Instant billingIssue = parse(sub.billingIssuesDetectedAt());
 		boolean willRenew = parse(sub.refundedAt()) == null && (parse(sub.unsubscribeDetectedAt()) == null || billingIssue != null);
-		return new Entitlement(true, expires, info.productIdentifier(), willRenew, billingIssue);
+		return new Entitlement(true, expires, info.productIdentifier(), willRenew, billingIssue, List.of(), sub.store());
 	}
 
 	private static Instant parse(String value) {

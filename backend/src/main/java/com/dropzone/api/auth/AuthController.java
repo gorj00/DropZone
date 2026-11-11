@@ -23,6 +23,11 @@ public class AuthController {
 		return authService.google(req.idToken());
 	}
 
+	@PostMapping("/apple")
+	AuthResponse apple(@Valid @RequestBody Requests.AppleAuth req) {
+		return authService.apple(req.idToken(), req.name(), req.authorizationCode());
+	}
+
 	@PostMapping("/admin")
 	AuthResponse admin(@Valid @RequestBody Requests.GoogleAuth req) {
 		return authService.admin(req.idToken());
