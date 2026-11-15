@@ -59,10 +59,11 @@ class CheckpointPlannerTest {
 	}
 
 	@Test
-	void supportsTwoToTenCheckpoints() {
+	void supportsTwoToMaxCheckpoints() {
 		assertThat(CheckpointPlanner.plan(80, 70, 2)).containsExactly(75.0, 70.0);
 		assertThat(CheckpointPlanner.plan(80, 70, 10)).hasSize(10).startsWith(79.0).endsWith(70.0);
+		assertThat(CheckpointPlanner.plan(80, 70, CheckpointPlanner.MAX)).hasSize(CheckpointPlanner.MAX).endsWith(70.0);
 		assertThatThrownBy(() -> CheckpointPlanner.plan(80, 70, 1)).isInstanceOf(IllegalArgumentException.class);
-		assertThatThrownBy(() -> CheckpointPlanner.plan(80, 70, 11)).isInstanceOf(IllegalArgumentException.class);
+		assertThatThrownBy(() -> CheckpointPlanner.plan(80, 70, CheckpointPlanner.MAX + 1)).isInstanceOf(IllegalArgumentException.class);
 	}
 }
