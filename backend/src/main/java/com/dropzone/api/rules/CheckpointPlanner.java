@@ -6,7 +6,7 @@ import java.util.List;
 public final class CheckpointPlanner {
 
 	public static final int MIN = 2;
-	public static final int MAX = 10;
+	public static final int MAX = 20;
 	private static final double EPSILON = 1e-6;
 
 	private CheckpointPlanner() {

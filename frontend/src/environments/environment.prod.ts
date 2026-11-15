@@ -7,5 +7,6 @@ export const environment = {
   revenueCatApiKey: 'goog_bnIrTtxCyYfNqYSArOopTSQwVDD',
   revenueCatIosApiKey: '',
   devLoginPath: null as string | null,
-  inviteBaseUrl: 'https://dropzone.mobi/invite/'
+  inviteBaseUrl: 'https://dropzone.mobi/invite/',
+  appStoreId: ''
 };

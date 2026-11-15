@@ -159,6 +159,10 @@ public class User {
 
 	public boolean proofResultPushes = true;
 
+	public Instant reviewPromptedAt;
+
+	public String feedFilter;
+
 	public boolean shareStats;
 
 	public Instant shareStatsAt;

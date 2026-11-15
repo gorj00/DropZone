@@ -5,7 +5,7 @@ import { filter } from 'rxjs';
 import { LengthUnit, Metric, OnboardingRequest, Path, QuestGroup, ProofType, QuestSettings, UnlockMode, WeightUnit } from '../../core/api/models';
 import { SessionStore } from '../../core/session.store';
 import { CatalogStore } from '../../core/stores';
-import { MIN_GAP, displayBounds, milestonesFit, spacedTargets, spreadTargets } from '../../core/plausibility';
+import { MAX_MILESTONES, MIN_GAP, displayBounds, displayGap, milestonesFit, ownMilestonesError, spacedTargets, spreadTargets } from '../../core/plausibility';
 import { DisplayUnit, Units, defaultUnits, displayUnit, toDisplay, toMetric } from '../../core/units';
 import { ALL_DAYS } from '../../ui/quest-schedule';
 
@@ -15,7 +15,7 @@ export const SIZES = ['Arms', 'Chest', 'Shoulders', 'Thighs'];
 interface Schedule { days: number[]; perDay: number; target: number | null; }
 
 export const STEPS = ['profile', 'path', 'goal', 'quests', 'lock'] as const;
-export const CHECKPOINT_COUNTS = [2, 3, 4, 5, 6, 7, 8, 9, 10];
+export const CHECKPOINT_COUNTS = Array.from({ length: MAX_MILESTONES - 1 }, (_, i) => i + 2);
 export type OnboardingStep = (typeof STEPS)[number];
 
 export interface OnboardingDraft {
@@ -164,7 +164,22 @@ export class OnboardingState {
     if (this.path() === 'LOSE' ? this.goal() >= this.start() : this.goal() <= this.start()) return 'direction';
     return this.track().length ? null : 'close';
   });
-  readonly valid = computed(() => this.problem() === null);
+  private readonly ownMilestonesRaw = signal<{ key: string; values: number[] } | null>(null);
+  private readonly planKey = computed(() => [this.path(), this.metric(), this.start(), this.goal(), this.checkpointCount(), this.weightUnit(), this.lengthUnit()].join('|'));
+  readonly ownMilestones = computed(() => {
+    const own = this.ownMilestonesRaw();
+    return own && own.key === this.planKey() ? own.values : null;
+  });
+  readonly milestoneGap = computed(() => displayGap(toDisplay(MIN_GAP[this.goalMetric()], this.unit(), this.units()), this.precision()));
+  readonly milestoneProblem = computed(() => {
+    const own = this.ownMilestones();
+    return own ? ownMilestonesError(own, this.start(), this.path() === 'LOSE', this.milestoneGap(), v => String(v)) : null;
+  });
+  readonly valid = computed(() => this.problem() === null && this.milestoneProblem() === null);
+
+  setOwnMilestones(values: number[] | null): void {
+    this.ownMilestonesRaw.set(values ? { key: this.planKey(), values } : null);
+  }
   readonly draft = computed<Omit<OnboardingDraft, 'userId'>>(() => ({
     step: this.step(),
     path: this.path(),
@@ -280,7 +295,8 @@ export class OnboardingState {
       unlockMode: this.unlockMode(),
       questSettings,
       weightUnit: this.weightUnit(),
-      lengthUnit: this.lengthUnit()
+      lengthUnit: this.lengthUnit(),
+      ...(this.ownMilestones() ? { milestones: this.ownMilestones()!.map(v => this.metricValue(v)) } : {})
     };
   }
 

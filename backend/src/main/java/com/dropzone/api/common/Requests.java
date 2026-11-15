@@ -15,6 +15,7 @@ import com.dropzone.api.domain.TransformationLayout;
 import com.dropzone.api.domain.UnlockMode;
 import com.dropzone.api.domain.Verification;
 import com.dropzone.api.domain.WeightUnit;
+import com.dropzone.api.rules.CheckpointPlanner;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
@@ -25,6 +26,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
@@ -62,10 +64,10 @@ public final class Requests {
 			@Size(max = 150) String bio, @Size(max = MAX_URL) String avatarUrl, Boolean trialEndAcknowledged, Boolean proEndAcknowledged,
 			Boolean skipRestDays, Boolean hiddenFromSearch, Boolean hiddenFromLeaderboards, Boolean verifyRequestPushes, Boolean commentPushes,
 			Boolean shareStats, @Valid Region region, Boolean reminderPushes, Boolean deadlinePushes, Boolean hypePushes,
-			Boolean friendPushes, Boolean proofResultPushes) {
+			Boolean friendPushes, Boolean proofResultPushes, Boolean reviewPrompted, @Pattern(regexp = "ALL|LOSE|GAIN") String feedFilter) {
 	}
 
-	public record UpdateGoal(@Positive Double startValue, @Positive Double goalValue) {
+	public record UpdateGoal(@Positive Double startValue, @Positive Double goalValue, @Size(max = CheckpointPlanner.MAX) List<@NotNull @Positive Double> milestones) {
 	}
 
 	public record PushToken(@NotBlank @Size(max = 512) String token, Platform platform) {
@@ -86,9 +88,10 @@ public final class Requests {
 
 	public record Onboarding(@NotNull Path path, @NotNull Metric metric, @Size(max = 60) String metricLabel,
 			@NotBlank @Size(max = 4) String unit, @NotNull @Positive Double startValue, @NotNull @Positive Double goalValue,
-			@NotNull @Min(2) @Max(10) Integer checkpoints, @NotNull @Size(max = MAX_CODES) List<@Size(max = 32) String> questCodes,
+			@NotNull @Min(2) @Max(CheckpointPlanner.MAX) Integer checkpoints, @NotNull @Size(max = MAX_CODES) List<@Size(max = 32) String> questCodes,
 			@Size(max = 20) List<@Size(max = 255) String> lockedApps, UnlockMode unlockMode,
-			@Valid @Size(max = MAX_CODES) List<QuestSettings> questSettings, WeightUnit weightUnit, LengthUnit lengthUnit) {
+			@Valid @Size(max = MAX_CODES) List<QuestSettings> questSettings, WeightUnit weightUnit, LengthUnit lengthUnit,
+			@Size(min = 2, max = CheckpointPlanner.MAX) List<@NotNull @Positive Double> milestones) {
 	}
 
 	public record CheckpointProof(@NotBlank @Size(max = MAX_URL) String photoUrl, @NotNull @Positive Double value,
@@ -153,7 +156,8 @@ public final class Requests {
 	}
 
 	public record NewGoal(Metric metric, @Size(max = 60) String metricLabel, @Size(max = 4) String unit, @Positive Double startValue,
-			@NotNull @Positive Double goalValue, @NotNull @Min(2) @Max(10) Integer checkpoints) {
+			@NotNull @Positive Double goalValue, @NotNull @Min(2) @Max(CheckpointPlanner.MAX) Integer checkpoints,
+			@Size(min = 2, max = CheckpointPlanner.MAX) List<@NotNull @Positive Double> milestones) {
 	}
 
 	public record Search(String q) {

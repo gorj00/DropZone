@@ -121,7 +121,7 @@ class FlowIntegrationTest extends IntegrationTest {
 	void validationErrorsUseContractShape() throws Exception {
 		Session user = login("Invalid");
 		post(user, "/api/v1/onboarding", """
-				{"path":"LOSE","metric":"WEIGHT","unit":"kg","startValue":90,"goalValue":80,"checkpoints":11,"questCodes":["WEIGH_IN"]}
+				{"path":"LOSE","metric":"WEIGHT","unit":"kg","startValue":90,"goalValue":80,"checkpoints":21,"questCodes":["WEIGH_IN"]}
 				""").andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.status").value(400))
 				.andExpect(jsonPath("$.code").value("VALIDATION"));

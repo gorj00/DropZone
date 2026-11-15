@@ -9,6 +9,8 @@ export const METRIC_BOUNDS: Record<Metric, { min: number; max: number }> = {
 
 export const MIN_GAP: Record<Metric, number> = { WEIGHT: 0.2, STRENGTH: 0.2, SIZE: 0.5 };
 
+export const MAX_MILESTONES = 20;
+
 export const BIG_JUMP = { kg: 15, share: 0.2 };
 
 export function metricUnit(metric: Metric): 'kg' | 'cm' {
@@ -74,4 +76,23 @@ export function milestonesFit(from: number, to: number, count: number, minGap: n
 
 export function reachesTarget(path: Path, value: number, target: number, tolerance: number): boolean {
   return path === 'LOSE' ? value <= target + tolerance + 1e-9 : value >= target - tolerance - 1e-9;
+}
+
+export function ownMilestonesError(values: number[], start: number, lose: boolean, gap: number, fmt: (v: number) => string, firstIndex = 1): string | null {
+  let previous = start;
+  for (let i = 0; i < values.length; i++) {
+    const v = values[i];
+    if (!Number.isFinite(v) || v <= 0) return `Enter a value for milestone ${i + firstIndex}.`;
+    const step = lose ? previous - v : v - previous;
+    if (step < gap - 1e-6) {
+      return `Milestone ${i + firstIndex} must be ${lose ? 'below' : 'above'} ${fmt(previous)}, at least ${fmt(gap)} away.`;
+    }
+    previous = v;
+  }
+  return null;
+}
+
+export function displayGap(gap: number, digits: number): number {
+  const f = 10 ** digits;
+  return Math.ceil(gap * f - 1e-6) / f;
 }

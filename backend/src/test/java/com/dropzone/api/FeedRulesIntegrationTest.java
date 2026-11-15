@@ -62,6 +62,32 @@ class FeedRulesIntegrationTest extends IntegrationTest {
 	}
 
 	@Test
+	void feedFiltersByTheAuthorsGoalTypeAndRemembersTheChoice() throws Exception {
+		Session loser = loginPro("PathLose");
+		onboardLose(loser, 2, "WEIGH_IN");
+		Session gainer = loginPro("PathGain");
+		post(gainer, "/api/v1/onboarding", """
+				{"path":"GAIN","metric":"WEIGHT","unit":"kg","startValue":70,"goalValue":80,"checkpoints":2,
+				 "questCodes":["WEIGH_IN"],"lockedApps":[],"unlockMode":"WHOLE_DAY","questSettings":%s}
+				""".formatted(daily("WEIGH_IN"))).andExpect(status().isOk());
+		String losePost = transformation(loser, "EVERYONE");
+		String gainPost = transformation(gainer, "EVERYONE");
+		Session viewer = loginPro("PathViewer");
+
+		get(viewer, "/api/v1/feed?scope=EVERYONE&limit=50").andExpect(jsonPath("$[*].id", hasItem(losePost)))
+				.andExpect(jsonPath("$[*].id", hasItem(gainPost)));
+		get(viewer, "/api/v1/feed?scope=EVERYONE&limit=50&path=GAIN").andExpect(jsonPath("$[*].id", hasItem(gainPost)))
+				.andExpect(jsonPath("$[*].id", not(hasItem(losePost))));
+		get(viewer, "/api/v1/feed?scope=EVERYONE&limit=50&path=LOSE").andExpect(jsonPath("$[*].id", hasItem(losePost)))
+				.andExpect(jsonPath("$[*].id", not(hasItem(gainPost))));
+
+		get(viewer, "/api/v1/me").andExpect(jsonPath("$.feedFilter").doesNotExist());
+		patch(viewer, "/api/v1/me", "{\"feedFilter\":\"OTHER\"}").andExpect(status().isBadRequest());
+		patch(viewer, "/api/v1/me", "{\"feedFilter\":\"GAIN\"}").andExpect(status().isOk()).andExpect(jsonPath("$.feedFilter").value("GAIN"));
+		get(viewer, "/api/v1/me").andExpect(jsonPath("$.feedFilter").value("GAIN"));
+	}
+
+	@Test
 	void authorsCanMakeTheirPostPrivateOrDeleteIt() throws Exception {
 		Session owner = loginPro("PostAuthor");
 		onboardLose(owner, 2, "WEIGH_IN");

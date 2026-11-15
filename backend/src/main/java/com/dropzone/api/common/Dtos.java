@@ -43,7 +43,7 @@ public final class Dtos {
 			boolean willRenew, String proProductId, boolean billingIssue, boolean proEndPending, boolean skipRestDays,
 			boolean hiddenFromSearch, boolean hiddenFromLeaderboards, boolean verifyRequestPushes, boolean commentPushes, boolean shareStats, boolean billingHold, String pendingPlanId,
 			Instant pendingPlanAt, boolean reminderPushes, boolean deadlinePushes, boolean hypePushes, boolean friendPushes,
-			boolean proofResultPushes) {
+			boolean proofResultPushes, boolean reviewPrompted, boolean reviewDue, String feedFilter) {
 	}
 
 	public record PublicConfigDto(int minVersionCode, String termsVersion, String privacyVersion, String termsUrl, String privacyUrl,

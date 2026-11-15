@@ -3,7 +3,7 @@ import { Location } from '@angular/common';
 import { Router } from '@angular/router';
 import { ApiService } from '../../core/api/api.service';
 import { Goal } from '../../core/api/models';
-import { MIN_GAP, displayBounds, milestonesFit } from '../../core/plausibility';
+import { MAX_MILESTONES, MIN_GAP, displayBounds, displayGap, milestonesFit, ownMilestonesError } from '../../core/plausibility';
 import { GoalStore } from '../../core/stores';
 import { ToastService } from '../../core/toast.service';
 import { UnitsService } from '../../core/units';
@@ -11,6 +11,7 @@ import { Icon } from '../../ui/icon';
 import { ValueInput } from '../onboarding/goal';
 import { CHECKPOINT_COUNTS, planCheckpoints, roundTo } from '../onboarding/onboarding.state';
 import { beyond } from './goal-plan';
+import { MilestoneInputs } from './milestone-inputs';
 
 const STEP: Record<Goal['metric'], { metric: number; imperial: number }> = {
   WEIGHT: { metric: 0.5, imperial: 1 },
@@ -27,7 +28,7 @@ export function suggestedTarget(goal: Goal, step: number, digits: number, toDisp
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Icon, ValueInput],
+  imports: [MilestoneInputs, Icon, ValueInput],
   template: `
     <div class="screen">
       <div class="pad pt-3 h-[62px] flex items-center gap-3">
@@ -72,30 +73,23 @@ export function suggestedTarget(goal: Goal, step: number, digits: number, toDisp
             <span class="lbl">Milestone rewards</span>
             @if (!problem()) { <span class="text-[12px] text-mute font-semibold">{{ track().length }} milestones</span> }
           </div>
-          <div class="grid grid-cols-9 gap-[5px]">
+          <div class="flex gap-[5px] overflow-x-auto -mx-5 px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             @for (n of counts; track n) {
               @let fits = fitting().has(n);
-              <button class="opt sm" [class.on]="chosen() === n" [class.opacity-40]="!fits" [disabled]="!fits" [attr.aria-pressed]="chosen() === n" (click)="count.set(n)">{{ n }}</button>
+              <button class="opt sm shrink-0 w-[44px]" [class.on]="chosen() === n" [class.opacity-40]="!fits" [disabled]="!fits" [attr.aria-pressed]="chosen() === n" (click)="count.set(n)">{{ n }}</button>
             }
           </div>
         </div>
 
-        @if (!problem()) {
+        @if (!problem() && goal(); as g) {
           <div class="pad mt-4">
-            <div class="card divide-y divide-line">
-              @for (v of track(); track $index; let last = $last) {
-                <div class="px-3.5 h-[44px] flex items-center gap-3">
-                  <span class="inline-flex" [class.text-gold]="!last" [class.text-accent]="last"><app-icon [name]="last ? 'flag' : 'gift'" [size]="16" /></span>
-                  <span class="flex-1 text-[14px] font-semibold">{{ last ? 'Goal' : 'Milestone ' + ($index + 1) }}</span>
-                  <span class="num text-[16px]">{{ u.fmt(v, g.unit) }} {{ unit() }}</span>
-                </div>
-              }
-            </div>
+            <app-milestone-inputs [planned]="plannedDisplay()" [goal]="target()" [start]="startDisplay()" [lose]="g.path === 'LOSE'" [gap]="gapDisplay()"
+              [unit]="unit()" [digits]="digits()" [own]="ownMilestones()" (ownChange)="setOwn($event)" />
           </div>
         }
 
         <div class="mt-auto pad pt-6 pb-[calc(32px+env(safe-area-inset-bottom))]">
-          <button class="btn btn-primary" [disabled]="saving() || !!problem()" (click)="save()">{{ saving() ? 'Saving…' : 'Start new goal' }}</button>
+          <button class="btn btn-primary" [disabled]="saving() || !!problem() || !!milestoneProblem()" (click)="save()">{{ saving() ? 'Saving…' : 'Start new goal' }}</button>
         </div>
       } @else {
         <div class="pad mt-4 space-y-3"><div class="skeleton h-[84px]"></div><div class="skeleton h-[84px]"></div><div class="skeleton h-[160px]"></div></div>
@@ -152,6 +146,21 @@ export class NewGoalPage {
     return null;
   });
 
+  protected readonly plannedDisplay = computed(() => this.track().map(v => this.u.value(v, this.goal()?.unit ?? 'kg')));
+  protected readonly startDisplay = computed(() => this.u.value(this.start(), this.goal()?.unit ?? 'kg'));
+  protected readonly gapDisplay = computed(() => displayGap(this.u.value(MIN_GAP[this.goal()?.metric ?? 'WEIGHT'], this.goal()?.unit ?? 'kg'), this.digits()));
+  private readonly ownRaw = signal<{ key: string; values: number[] } | null>(null);
+  private readonly planKey = computed(() => `${this.target()}|${this.chosen()}`);
+  protected readonly ownMilestones = computed(() => {
+    const own = this.ownRaw();
+    return own && own.key === this.planKey() ? own.values : null;
+  });
+  protected readonly milestoneProblem = computed(() => {
+    const g = this.goal();
+    const own = this.ownMilestones();
+    return g && own ? ownMilestonesError(own, this.startDisplay(), g.path === 'LOSE', this.gapDisplay(), v => String(v)) : null;
+  });
+
   private filled = false;
 
   constructor() {
@@ -162,7 +171,7 @@ export class NewGoalPage {
       const g = this.goal();
       if (!g || this.filled) return;
       this.filled = true;
-      this.count.set(Math.min(10, Math.max(2, g.checkpoints.length || 4)));
+      this.count.set(Math.min(MAX_MILESTONES, Math.max(2, g.checkpoints.length || 4)));
       this.target.set(suggestedTarget(g, this.step(), this.digits(), v => this.u.value(v, g.unit)));
     });
   }
@@ -177,15 +186,25 @@ export class NewGoalPage {
     if (Number.isFinite(v) && v > 0) this.target.set(roundTo(v, this.digits()));
   }
 
+  protected setOwn(values: number[] | null): void {
+    this.ownRaw.set(values ? { key: this.planKey(), values } : null);
+  }
+
   protected nudge(dir: 1 | -1): void {
     this.target.update(t => roundTo(t + dir * this.step(), this.digits()));
   }
 
   protected async save(): Promise<void> {
-    if (this.problem() || this.saving()) return;
+    if (this.problem() || this.milestoneProblem() || this.saving()) return;
+    const own = this.ownMilestones();
+    const unit = this.goal()?.unit ?? 'kg';
     this.saving.set(true);
     try {
-      const g = await this.api.newGoal({ goalValue: this.targetMetric(), checkpoints: this.track().length });
+      const g = await this.api.newGoal({
+        goalValue: this.targetMetric(),
+        checkpoints: this.track().length,
+        ...(own ? { milestones: own.map((v, i) => (i === own.length - 1 ? this.targetMetric() : this.u.toMetric(v, unit))) } : {})
+      });
       this.goals.goal.set(g);
       this.toast.show('New goal set. Pick rewards for your milestones.');
       void this.router.navigateByUrl('/journey', { replaceUrl: true });

@@ -5,7 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   AdminReport, AdminUser, AppConfig, AppNotification, Page, Checkpoint, CheckpointPatch, DailyLogDetail, DayLogs, CheckpointSocial, CompleteQuestRequest, CustomQuestRequest, FeedComment, FeedItem,
-  FeedScope, FriendRequest, Goal, GoalHistory, GoalPatch, HandleCheck, InviteResult, Leaderboard, Measurement, NewGoalRequest, OnboardingRequest, PastGoal, Period, PhotoResult, ProofView, QuestPatch, QuestSettings, QuestType,
+  FeedScope, FriendRequest, Goal, GoalHistory, GoalPatch, HandleCheck, InviteResult, Leaderboard, Measurement, NewGoalRequest, OnboardingRequest, PastGoal, Path, Period, PhotoResult, ProofView, QuestPatch, QuestSettings, QuestType,
   ReportedItem, ReportTarget, SlipUp, SlipUpType, Stats, Today, TodayQuest, Transformation, TransformationRequest, User, UserPatch,
   UserProfile, UserQuest, UserSummary
 } from './models';
@@ -126,7 +126,7 @@ export class ApiService {
 
   userProfile(id: string) { return this.get<UserProfile>(`/users/${id}/profile`); }
   userFeed(id: string, cursor?: string, limit = 20) { return this.page<FeedItem>(`/users/${id}/feed`, { cursor, limit }); }
-  feed(scope: FeedScope, cursor?: string, limit = 20) { return this.page<FeedItem>('/feed', { scope, cursor, limit }); }
+  feed(scope: FeedScope, cursor?: string, limit = 20, path?: Path) { return this.page<FeedItem>('/feed', { scope, cursor, limit, path }); }
   updateFeedItem(feedId: string, patch: { isPublic: boolean }) { return this.patch<FeedItem>(`/feed/${feedId}`, patch); }
   deleteFeedItem(feedId: string) { return this.delete<void>(`/feed/${feedId}`); }
   pendingCount() { return this.get<{ count: number }>('/feed/pending-count'); }

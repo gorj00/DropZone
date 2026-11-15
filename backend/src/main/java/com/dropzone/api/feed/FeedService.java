@@ -20,6 +20,7 @@ import com.dropzone.api.domain.FeedType;
 import com.dropzone.api.domain.Goal;
 import com.dropzone.api.domain.Hype;
 import com.dropzone.api.domain.HypeRepository;
+import com.dropzone.api.domain.Path;
 import com.dropzone.api.domain.ModerationState;
 import com.dropzone.api.domain.NotificationType;
 import com.dropzone.api.domain.PostVisibility;
@@ -125,6 +126,11 @@ public class FeedService {
 
 	@Transactional(readOnly = true)
 	public Paged<FeedItemDto> list(UUID userId, FeedScope scope, Instant before, String cursor, Integer limit) {
+		return list(userId, scope, before, cursor, limit, null);
+	}
+
+	@Transactional(readOnly = true)
+	public Paged<FeedItemDto> list(UUID userId, FeedScope scope, Instant before, String cursor, Integer limit, Path path) {
 		User me = users.get(userId);
 		users.requirePro(me, "Feed");
 		int size = limit == null ? 20 : Math.max(1, Math.min(MAX_LIMIT, limit));
@@ -135,11 +141,17 @@ public class FeedService {
 		authors.add(userId);
 		Instant now = clock.instant();
 		Instant renewing = now.minus(User.RENEWAL_LEEWAY);
-		return scanPages(viewer, Cursor.start(cursor, before, now), size, from -> switch (scope) {
+		Function<Cursor, List<FeedItem>> pages = from -> switch (scope) {
 			case EVERYONE -> feed.everyonePage(userId, hidden, now, renewing, from.at(), from.id(), size);
 			case TO_VERIFY -> feed.toVerifyPage(userId, friends, hidden, now, renewing, from.at(), from.id(), size);
 			case FRIENDS -> feed.friendsPage(userId, authors, hidden, now, renewing, from.at(), from.id(), size);
-		});
+		};
+		return scanPages(viewer, Cursor.start(cursor, before, now), size, pages, path);
+	}
+
+	private Set<UUID> authorsOnPath(List<FeedItem> page, Path path) {
+		Set<UUID> ids = page.stream().map(i -> i.userId).collect(Collectors.toSet());
+		return userRepository.findByIdIn(ids).stream().filter(u -> u.path == path).map(u -> u.id).collect(Collectors.toSet());
 	}
 
 	@Transactional(readOnly = true)
@@ -153,16 +165,19 @@ public class FeedService {
 		Instant now = clock.instant();
 		Instant renewing = now.minus(User.RENEWAL_LEEWAY);
 		return scanPages(viewer, Cursor.start(cursor, null, now), size,
-				from -> feed.authorPage(userId, author.id, friend, hidden, now, renewing, from.at(), from.id(), size));
+				from -> feed.authorPage(userId, author.id, friend, hidden, now, renewing, from.at(), from.id(), size), null);
 	}
 
-	private Paged<FeedItemDto> scanPages(Viewer viewer, Cursor start, int size, Function<Cursor, List<FeedItem>> pages) {
+	private Paged<FeedItemDto> scanPages(Viewer viewer, Cursor start, int size, Function<Cursor, List<FeedItem>> pages, Path path) {
 		Cursor from = start;
 		List<FeedItem> visible = new ArrayList<>();
 		String next = null;
 		for (int scan = 0; scan < MAX_SCANS; scan++) {
 			List<FeedItem> page = pages.apply(from);
-			Set<UUID> allowed = access.filter(viewer, page).stream().map(i -> i.id).collect(Collectors.toSet());
+			Set<UUID> permitted = access.filter(viewer, page).stream().map(i -> i.id).collect(Collectors.toSet());
+			Set<UUID> onPath = path == null ? null : authorsOnPath(page, path);
+			Set<UUID> allowed = onPath == null ? permitted
+					: page.stream().filter(i -> permitted.contains(i.id) && onPath.contains(i.userId)).map(i -> i.id).collect(Collectors.toSet());
 			for (FeedItem item : page) {
 				from = Cursor.after(item.createdAt, item.id);
 				if (allowed.contains(item.id)) {

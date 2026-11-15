@@ -1,9 +1,9 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, ParamMap, RouterLink } from '@angular/router';
 import { skip } from 'rxjs';
 import { ApiService } from '../../core/api/api.service';
-import { FeedItem, FeedScope } from '../../core/api/models';
+import { FeedFilter, FeedItem, FeedScope, Path } from '../../core/api/models';
 import { PhotoLinks } from '../../core/photo-links';
 import { SessionStore } from '../../core/session.store';
 import { ToastService } from '../../core/toast.service';
@@ -50,15 +50,34 @@ const wantsToVerify = (p: ParamMap) => p.get('show') === 'verify';
           </div>
         </div>
 
-        <div class="pad mt-3">
-          <div class="grid grid-cols-2 gap-1 bg-s1 rounded-[14px] p-1 border border-line">
+        <div class="pad mt-3 flex gap-2">
+          <div class="flex-1 grid grid-cols-2 gap-1 bg-s1 rounded-[14px] p-1 border border-line">
             @for (s of scopes; track s.id) {
               <button class="rounded-[10px] h-[34px] flex items-center justify-center gap-2 font-bold text-[13.5px]" [class.bg-s3]="scope() === s.id" [class.text-mute]="scope() !== s.id" (click)="setScope(s.id)">
                 <app-icon [name]="s.icon" [size]="15" />{{ s.label }}
               </button>
             }
           </div>
+          @if (scope() !== 'TO_VERIFY') {
+            <button class="w-[44px] shrink-0 rounded-[14px] bg-s1 border border-line grid place-items-center" [class.text-accent]="filterOpen()"
+              aria-label="Filter posts" [attr.aria-expanded]="filterOpen()" (click)="filterOpen.set(!filterOpen())">
+              <app-icon name="filter" [size]="18" />
+            </button>
+          }
         </div>
+
+        @if (scope() !== 'TO_VERIFY' && filterOpen()) {
+          <div class="pad mt-2">
+            <div class="card px-3.5 py-1" role="radiogroup" aria-label="Show posts from">
+              @for (f of filters; track f.id) {
+                <button class="w-full flex items-center gap-3 py-2.5 text-left" role="radio" [attr.aria-checked]="filter() === f.id" (click)="setFilter(f.id)">
+                  <span class="radio" [class.on]="filter() === f.id"></span>
+                  <span class="flex-1 font-semibold text-[14px]">{{ f.label }}</span>
+                </button>
+              }
+            </div>
+          </div>
+        }
 
         <app-leaderboard />
 
@@ -130,6 +149,17 @@ export class SquadPage {
     { id: 'EVERYONE', label: 'Everyone', icon: 'globe' }
   ];
   protected readonly scope = signal<FeedScope>('FRIENDS');
+  protected readonly filters: { id: FeedFilter; label: string }[] = [
+    { id: 'ALL', label: 'All' },
+    { id: 'LOSE', label: 'Weight loss' },
+    { id: 'GAIN', label: 'Build muscle' }
+  ];
+  private readonly chosenFilter = signal<FeedFilter | null>(null);
+  protected readonly filterOpen = signal(false);
+  protected readonly filter = computed<FeedFilter>(() => {
+    const u = this.session.user();
+    return this.chosenFilter() ?? u?.feedFilter ?? u?.path ?? 'ALL';
+  });
   protected readonly items = signal<FeedItem[]>([]);
   protected readonly loading = signal(false);
   protected readonly refreshing = signal(false);
@@ -171,6 +201,19 @@ export class SquadPage {
     }
   }
 
+  protected setFilter(f: FeedFilter): void {
+    this.filterOpen.set(false);
+    if (this.filter() === f) return;
+    this.chosenFilter.set(f);
+    void this.load(true);
+    void this.session.update({ feedFilter: f }).catch(e => this.toast.error(e));
+  }
+
+  private pathParam(scope: FeedScope): Path | undefined {
+    const f = this.filter();
+    return scope === 'TO_VERIFY' || f === 'ALL' ? undefined : f;
+  }
+
   protected setScope(s: FeedScope): void {
     if (this.scope() === s) return;
     this.scope.set(s);
@@ -187,8 +230,9 @@ export class SquadPage {
     const scope = this.scope();
     this.refreshing.set(true);
     try {
-      const page = await this.api.feed(scope, undefined, PAGE);
-      if (scope !== this.scope()) return;
+      const filter = this.filter();
+      const page = await this.api.feed(scope, undefined, PAGE, this.pathParam(scope));
+      if (scope !== this.scope() || filter !== this.filter()) return;
       this.items.set(page.items);
       this.next = page.next;
       this.done.set(!page.next);
@@ -237,6 +281,7 @@ export class SquadPage {
 
   private async load(reset: boolean): Promise<void> {
     const scope = this.scope();
+    const filter = this.filter();
     if (reset) {
       this.items.set([]);
       this.done.set(false);
@@ -245,8 +290,8 @@ export class SquadPage {
     this.failed.set(false);
     this.loading.set(true);
     try {
-      const page = await this.api.feed(scope, reset ? undefined : this.next ?? undefined, PAGE);
-      if (scope !== this.scope()) return;
+      const page = await this.api.feed(scope, reset ? undefined : this.next ?? undefined, PAGE, this.pathParam(scope));
+      if (scope !== this.scope() || filter !== this.filter()) return;
       const seen = new Set(this.items().map(x => x.id));
       this.items.update(list => [...list, ...page.items.filter(x => !seen.has(x.id))]);
       this.next = page.next;

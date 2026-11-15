@@ -6,6 +6,7 @@ import { Badge } from '../../ui/badge';
 import { StepBar } from '../../ui/bits';
 import { Icon } from '../../ui/icon';
 import { Silhouette } from '../../ui/silhouette';
+import { MilestoneInputs } from '../journey/milestone-inputs';
 import { CHECKPOINT_COUNTS, LIFTS, OnboardingState, SIZES, trimNum } from './onboarding.state';
 
 @Component({
@@ -40,7 +41,7 @@ export class ValueInput {
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [StepBar, Icon, Silhouette, Badge, ValueInput],
+  imports: [StepBar, Icon, Silhouette, Badge, ValueInput, MilestoneInputs],
   host: {
     '[style.--gain]': "theme.isNeon() ? 'var(--accent-2)' : 'var(--ok)'",
     '[style.--gain-rgb]': "theme.isNeon() ? 'var(--accent-2-rgb)' : 'var(--ok-rgb)'"
@@ -185,16 +186,17 @@ export class ValueInput {
           <span class="lbl">Milestone rewards</span>
           @if (state.valid()) { <span class="text-[12px] text-mute font-semibold">1 reward every {{ lose() ? '' : '+' }}{{ perText() }} {{ state.displayUnit() }}</span> }
         </div>
-        <div class="grid grid-cols-9 gap-[5px]">
+        <div class="flex gap-[5px] overflow-x-auto -mx-5 px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           @for (n of counts; track n) {
             @let fits = state.fittingCounts().has(n);
-            <button class="opt sm" [class.on]="state.checkpointCount() === n" [class.opacity-40]="!fits" [disabled]="!fits" (click)="state.checkpoints.set(n)">{{ n }}</button>
+            <button class="opt sm shrink-0 w-[44px]" [class.on]="state.checkpointCount() === n" [class.opacity-40]="!fits" [disabled]="!fits" (click)="state.checkpoints.set(n)">{{ n }}</button>
           }
         </div>
       </div>
 
-      @if (lose() && state.valid()) {
-        <div class="mx-5 mt-4 relative h-[60px]">
+      @if (lose() && state.problem() === null) {
+        <div class="mt-4 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div class="mx-5 relative h-[60px]" [style.min-width.px]="trackWidth()">
           <div class="absolute left-5 right-5 top-[17px] h-[2px]" [style.background]="theme.isNeon() ? 'linear-gradient(90deg,var(--accent-2),var(--violet),var(--accent))' : 'var(--s3)'"></div>
           <div class="absolute inset-x-0 top-0 flex justify-between">
             <div class="flex flex-col items-center flex-1 min-w-0">
@@ -203,7 +205,7 @@ export class ValueInput {
               </div>
               <span class="num mt-1.5 text-mute" [style.font-size.px]="trackFont()">{{ state.start().toFixed(1) }}</span>
             </div>
-            @for (v of state.track(); track $index; let last = $last) {
+            @for (v of state.ownMilestones() ?? state.track(); track $index; let last = $last) {
               <div class="flex flex-col items-center flex-1 min-w-0">
                 @if (theme.isNeon()) {
                   <app-badge [tone]="last ? 'gold' : 'violet'" [icon]="last ? 'flag' : 'gift'" [size]="badgeSize()" [glowing]="last" />
@@ -218,6 +220,14 @@ export class ValueInput {
               </div>
             }
           </div>
+        </div>
+        </div>
+      }
+
+      @if (state.problem() === null) {
+        <div class="pad mt-4">
+          <app-milestone-inputs [planned]="state.track()" [goal]="state.goal()" [start]="state.start()" [lose]="lose()" [gap]="state.milestoneGap()"
+            [unit]="state.displayUnit()" [digits]="state.precision()" [own]="state.ownMilestones()" (ownChange)="state.setOwnMilestones($event)" />
         </div>
       }
 
@@ -263,6 +273,7 @@ export class GoalPage {
   protected readonly labelOptions = computed(() => (this.state.metric() === 'STRENGTH' ? LIFTS : SIZES));
   protected readonly totalText = computed(() => (this.fixed() ? this.state.total().toFixed(1) : trimNum(this.state.total(), this.state.precision())));
   protected readonly perText = computed(() => trimNum(this.state.perCheckpoint(), this.state.precision()));
+  protected readonly trackWidth = computed(() => (this.state.checkpointCount() > 10 ? (this.state.checkpointCount() + 1) * 34 : 0));
   protected readonly badgeSize = computed(() => (this.state.checkpointCount() <= 5 ? 30 : this.state.checkpointCount() <= 7 ? 26 : 22));
   protected readonly trackFont = computed(() => (this.state.checkpointCount() <= 4 ? 12.5 : this.state.checkpointCount() <= 6 ? 11 : 10.5));
   protected readonly shortLabel = computed(() => {

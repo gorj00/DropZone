@@ -71,6 +71,9 @@ export interface User {
   hypePushes?: boolean;
   friendPushes?: boolean;
   proofResultPushes?: boolean;
+  reviewPrompted?: boolean;
+  reviewDue?: boolean;
+  feedFilter?: FeedFilter | null;
   shareStats?: boolean;
 }
 
@@ -165,6 +168,7 @@ export interface NewGoalRequest {
   metricLabel?: string | null;
   unit?: 'kg' | 'cm';
   startValue?: number;
+  milestones?: number[];
 }
 
 export interface QuestType {
@@ -575,6 +579,7 @@ export interface OnboardingRequest {
   questSettings?: QuestSettings[];
   weightUnit?: WeightUnit;
   lengthUnit?: LengthUnit;
+  milestones?: number[];
 }
 
 export interface CompleteQuestRequest {
@@ -598,8 +603,10 @@ export interface CustomQuestRequest {
   checkAudience?: CheckAudience;
 }
 
-export type UserPatch = Partial<Pick<User, 'displayName' | 'handle' | 'theme' | 'unlockMode' | 'minutesPerQuest' | 'publicByDefault' | 'defaultVerification' | 'slipUpTracking' | 'timezone' | 'weightUnit' | 'lengthUnit' | 'bio' | 'skipRestDays' | 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'verifyRequestPushes' | 'commentPushes' | 'reminderPushes' | 'deadlinePushes' | 'hypePushes' | 'friendPushes' | 'proofResultPushes' | 'shareStats'>> & { avatarUrl?: string; trialEndAcknowledged?: boolean; proEndAcknowledged?: boolean; region?: { source: string; value: string; eu: boolean } };
+export type UserPatch = Partial<Pick<User, 'displayName' | 'handle' | 'theme' | 'unlockMode' | 'minutesPerQuest' | 'publicByDefault' | 'defaultVerification' | 'slipUpTracking' | 'timezone' | 'weightUnit' | 'lengthUnit' | 'bio' | 'skipRestDays' | 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'verifyRequestPushes' | 'commentPushes' | 'reminderPushes' | 'deadlinePushes' | 'hypePushes' | 'friendPushes' | 'proofResultPushes' | 'feedFilter' | 'shareStats'>> & { reviewPrompted?: boolean } & { avatarUrl?: string; trialEndAcknowledged?: boolean; proEndAcknowledged?: boolean; region?: { source: string; value: string; eu: boolean } };
 
 export type CheckpointPatch = Partial<Pick<Checkpoint, 'rewardTitle' | 'rewardImageUrl' | 'rewardImageCredit' | 'isPublic' | 'visibility' | 'verification' | 'deadline' | 'targetValue'>>;
 
-export type GoalPatch = Partial<Pick<Goal, 'startValue' | 'goalValue'>>;
+export type GoalPatch = Partial<Pick<Goal, 'startValue' | 'goalValue'>> & { milestones?: number[] };
+
+export type FeedFilter = 'ALL' | Path;

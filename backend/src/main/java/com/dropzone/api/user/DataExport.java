@@ -44,7 +44,8 @@ public record DataExport(Instant exportedAt, Profile profile, List<GoalEntry> go
 			String proProductId, Instant trialEndsAt, String termsVersion, String privacyVersion, Instant termsAcceptedAt,
 			Instant ageConfirmedAt, boolean hiddenFromSearch, boolean hiddenFromLeaderboards, boolean verifyRequestPushes, boolean commentPushes, boolean shareStats,
 			Instant shareStatsAt, String regionSource, String regionValue, Boolean regionEu, Instant regionAt, boolean reminderPushes,
-			boolean deadlinePushes, boolean hypePushes, boolean friendPushes, boolean proofResultPushes) {
+			boolean deadlinePushes, boolean hypePushes, boolean friendPushes, boolean proofResultPushes, Instant reviewPromptedAt,
+			String feedFilter) {
 	}
 
 	public record ProofEntry(UUID id, ProofKind kind, @Photo String photoUrl, Double value, List<String> mlLabels, String mlText, ProofStatus status,

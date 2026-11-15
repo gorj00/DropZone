@@ -47,6 +47,38 @@ class MilestoneRulesIntegrationTest extends IntegrationTest {
 	}
 
 	@Test
+	void ownMilestoneValuesAreKeptWhenTheyStepTowardTheGoal() throws Exception {
+		Session user = login("OwnMilestones");
+		String withOwn = goal(90, 80, 3).replace("\"checkpoints\":3", "\"checkpoints\":3,\"milestones\":[88,84,80]");
+		post(user, "/api/v1/onboarding", goal(90, 80, 3).replace("\"checkpoints\":3", "\"checkpoints\":3,\"milestones\":[88,89,80]"))
+				.andExpect(status().isBadRequest());
+		post(user, "/api/v1/onboarding", goal(90, 80, 3).replace("\"checkpoints\":3", "\"checkpoints\":3,\"milestones\":[88,84,81]"))
+				.andExpect(status().isBadRequest());
+		post(user, "/api/v1/onboarding", goal(90, 80, 3).replace("\"checkpoints\":3", "\"checkpoints\":3,\"milestones\":[89.9,84,80]"))
+				.andExpect(status().isBadRequest());
+		String onboarding = body(post(user, "/api/v1/onboarding", withOwn).andExpect(status().isOk()));
+		assertThat((List<Double>) JsonPath.read(onboarding, "$.goal.checkpoints[*].targetValue")).containsExactly(88.0, 84.0, 80.0);
+	}
+
+	@Test
+	void editGoalMovesOpenMilestonesAndAddsNewOnesAfterTheLast() throws Exception {
+		Session user = login("GrowMilestones");
+		String checkpoint = JsonPath.read(onboardLose(user, 2, "WEIGH_IN"), "$.goal.checkpoints[0].id");
+		post(user, "/api/v1/checkpoints/" + checkpoint + "/proof", proof(user, 84.9)).andExpect(status().isOk());
+
+		patch(user, "/api/v1/goal", "{\"milestones\":[86,79]}").andExpect(status().isBadRequest());
+		patch(user, "/api/v1/goal", "{\"milestones\":[82,82.1]}").andExpect(status().isBadRequest());
+		patch(user, "/api/v1/goal", "{\"milestones\":[84,83.5,83,82.5,82,81.5,81,80.5,80,79.5,79,78.5,78,77.5,77,76.5,76,75.5,75,74.5]}").andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("A goal has at most 20 milestones"));
+		String edited = body(patch(user, "/api/v1/goal", "{\"milestones\":[82,79,77]}").andExpect(status().isOk()));
+		assertThat((List<Double>) JsonPath.read(edited, "$.checkpoints[*].targetValue")).containsExactly(85.0, 82.0, 79.0, 77.0);
+		assertThat((List<String>) JsonPath.read(edited, "$.checkpoints[*].status")).containsExactly("CLEARED", "ACTIVE", "LOCKED", "LOCKED");
+		assertThat((Double) JsonPath.read(edited, "$.goalValue")).isEqualTo(77.0);
+		patch(user, "/api/v1/goal", "{\"milestones\":[82]}").andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("Milestones can't be removed"));
+	}
+
+	@Test
 	void parallelProofPostsClearTheMilestoneOnce() throws Exception {
 		Session user = login("DoubleProof");
 		String onboarding = onboardLose(user, 2, "WEIGH_IN");

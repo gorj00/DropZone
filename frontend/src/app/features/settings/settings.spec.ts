@@ -9,6 +9,7 @@ import { authInterceptor } from '../../core/auth';
 import { LockService } from '../../core/native/lock';
 import { DataExportService } from '../../core/data-export';
 import { APP_SETTINGS, PUSH } from '../../core/native/push';
+import { REVIEW } from '../../core/native/review';
 import { PromptService } from '../../core/prompt.service';
 import { SessionStore } from '../../core/session.store';
 import { ToastService } from '../../core/toast.service';
@@ -29,6 +30,7 @@ async function render(patch: Partial<User>, receive = 'granted', native = true) 
   };
   const appSettings = { openNotificationSettings: vi.fn().mockResolvedValue(undefined) };
   const dataExport = { download: vi.fn().mockResolvedValue('saved') };
+  const review = { native, ios: false, appStoreId: '', requestReview: vi.fn().mockResolvedValue(undefined), openAppStore: vi.fn().mockResolvedValue(undefined) };
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(withInterceptors([authInterceptor])),
@@ -37,7 +39,8 @@ async function render(patch: Partial<User>, receive = 'granted', native = true) 
       { provide: LockService, useValue: { native: false, blocked: () => false, status: signal(null), disable: vi.fn().mockResolvedValue(undefined) } },
       { provide: PUSH, useValue: { native, plugin } },
       { provide: APP_SETTINGS, useValue: appSettings },
-      { provide: DataExportService, useValue: dataExport }
+      { provide: DataExportService, useValue: dataExport },
+      { provide: REVIEW, useValue: review }
     ]
   });
   const session = TestBed.inject(SessionStore);
@@ -57,7 +60,7 @@ async function render(patch: Partial<User>, receive = 'granted', native = true) 
   await settle();
   const text = () => el.textContent?.replace(/\s+/g, ' ') ?? '';
   const button = (label: string) => [...el.querySelectorAll('button')].find(b => b.textContent?.replace(/\s+/g, ' ').trim().includes(label)) as HTMLButtonElement | undefined;
-  return { session, http, el, text, button, settle, plugin, appSettings, dataExport };
+  return { session, http, el, text, button, settle, plugin, appSettings, dataExport, review };
 }
 
 describe('SettingsPage handle check', () => {
@@ -282,6 +285,21 @@ describe('SettingsPage privacy and push switches', () => {
       await settle();
       expect(button(title)!.getAttribute('aria-checked')).toBe('false');
     }
+    await session.clear();
+  });
+
+  it('links to Edit goal and opens the store page from Rate DropZone', async () => {
+    const { el, button, review, session } = await render({});
+    const edit = [...el.querySelectorAll('a')].find(a => a.textContent?.includes('Edit goal'));
+    expect(edit?.getAttribute('href')).toBe('/goal/edit');
+    button('Rate DropZone')!.click();
+    expect(review.openAppStore).toHaveBeenCalledWith(undefined);
+    await session.clear();
+  });
+
+  it('hides Rate DropZone outside the app', async () => {
+    const { button, session } = await render({}, 'granted', false);
+    expect(button('Rate DropZone')).toBeUndefined();
     await session.clear();
   });
 });

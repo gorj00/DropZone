@@ -17,4 +17,7 @@ public interface DailyResultRepository extends JpaRepository<DailyResult, DailyR
 
 	@Query("select d.day from DailyResult d where d.userId = :userId and d.totalCount > 0 and d.doneCount >= d.totalCount")
 	List<LocalDate> completeDays(UUID userId);
+
+	@Query("select count(d) > 0 from DailyResult d where d.userId = :userId and d.day < :day and d.totalCount > 0 and d.doneCount >= d.totalCount")
+	boolean hasCompleteDayBefore(UUID userId, LocalDate day);
 }

@@ -206,7 +206,7 @@ public class DataExportService {
 				user.termsVersion, user.privacyVersion, user.termsAcceptedAt, user.ageConfirmedAt, user.hiddenFromSearch,
 				user.hiddenFromLeaderboards, user.verifyRequestPushes, user.commentPushes, user.shareStats, user.shareStatsAt,
 				user.regionSource, user.regionValue, user.regionEu, user.regionAt, user.reminderPushes, user.deadlinePushes, user.hypePushes,
-				user.friendPushes, user.proofResultPushes);
+				user.friendPushes, user.proofResultPushes, user.reviewPromptedAt, user.feedFilter);
 	}
 
 	private static ProofEntry proof(Proof proof) {

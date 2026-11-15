@@ -2,12 +2,12 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { Location } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Goal } from '../../core/api/models';
-import { boundsError, rangeText } from '../../core/plausibility';
+import { MAX_MILESTONES, MIN_GAP, boundsError, displayGap, ownMilestonesError, rangeText } from '../../core/plausibility';
 import { GoalStore } from '../../core/stores';
 import { ToastService } from '../../core/toast.service';
 import { UnitsService } from '../../core/units';
 import { Icon } from '../../ui/icon';
-import { goalEditError, isDone, respread, startLocked } from './goal-plan';
+import { beyond, isDone, lastDone, startLocked } from './goal-plan';
 import { pad } from './journey.util';
 
 @Component({
@@ -25,21 +25,21 @@ import { pad } from './journey.util';
           <p class="text-[14px] text-mute leading-snug">
             {{ g.path === 'LOSE' ? 'Weight loss' : 'Build' }}{{ g.metricLabel ? ' · ' + g.metricLabel : '' }}. Milestones you haven't reached yet move with the new values.
           </p>
-          <p class="text-[12.5px] text-mute mt-1.5 leading-snug">Changing the goal spreads those milestones evenly again, so targets you set yourself are replaced. Values from {{ range() }}.</p>
+          <p class="text-[12.5px] text-mute mt-1.5 leading-snug">Changing the target spreads the milestones you haven't reached evenly again. You can also set each one yourself or add new ones after the last. Values from {{ range() }}.</p>
         </div>
 
         <div class="pad mt-4 grid grid-cols-2 gap-2.5">
           <label class="block">
             <span class="lbl block mb-1.5">Start</span>
             <span class="relative block">
-              <input class="field num !pr-12 disabled:opacity-50" type="text" inputmode="decimal" [disabled]="locked()" [value]="startText()" (input)="startText.set($any($event.target).value)">
+              <input class="field num !pr-12 disabled:opacity-50" type="text" inputmode="decimal" [disabled]="locked()" [value]="startText()" (input)="setStart($any($event.target).value)">
               <span class="lbl absolute right-4 top-1/2 -translate-y-1/2">{{ unit() }}</span>
             </span>
           </label>
           <label class="block">
             <span class="lbl block mb-1.5">Target</span>
             <span class="relative block">
-              <input class="field num !pr-12" type="text" inputmode="decimal" [value]="targetText()" (input)="targetText.set($any($event.target).value)">
+              <input class="field num !pr-12" type="text" inputmode="decimal" [value]="targetText()" (input)="setTarget($any($event.target).value)">
               <span class="lbl absolute right-4 top-1/2 -translate-y-1/2">{{ unit() }}</span>
             </span>
           </label>
@@ -57,17 +57,25 @@ import { pad } from './journey.util';
         <div class="pad mt-5">
           <div class="lbl mb-2">Milestones</div>
           <div class="card divide-y divide-line">
-            @for (row of preview(); track row.index) {
-              <div class="px-3.5 h-[50px] flex items-center gap-3">
+            @for (row of rows(); track $index; let i = $index) {
+              <div class="px-3.5 h-[52px] flex items-center gap-3">
                 <span class="num text-[15px] w-7 text-mute">{{ pad(row.index) }}</span>
                 <span class="flex-1 min-w-0 truncate text-[14px] font-semibold">{{ row.title }}</span>
                 @if (row.done) {
                   <span class="chip !text-ok text-[11px]"><app-icon name="check" [size]="12" />{{ row.status }}</span>
+                  <span class="num text-[16px] text-mute">{{ row.text }} {{ unit() }}</span>
+                } @else {
+                  <input class="field num !h-[36px] !w-[96px] !px-2.5 text-right text-[15px]" type="text" inputmode="decimal" [attr.aria-label]="row.title"
+                    [value]="row.text" (input)="setRow(i, $any($event.target).value)">
+                  <span class="num text-[14px] text-mute w-6">{{ unit() }}</span>
                 }
-                <span class="num text-[16px]" [class.text-mute]="row.done" [class.text-accent]="row.changed">{{ units.fmt(row.value, g.unit) }} {{ unit() }}</span>
               </div>
             }
           </div>
+          <button class="btn btn-ghost btn-sm mt-2.5" [disabled]="rows().length >= maxMilestones" (click)="add()"><app-icon name="plus" [size]="15" />Add milestone</button>
+          @if (rows().length >= maxMilestones) {
+            <p class="text-[12px] text-mute mt-1.5">A goal has at most {{ maxMilestones }} milestones.</p>
+          }
         </div>
 
         <div class="mt-auto pad pt-6 pb-[calc(32px+env(safe-area-inset-bottom))]">
@@ -85,47 +93,73 @@ export class GoalEditPage {
   private readonly location = inject(Location);
   protected readonly units = inject(UnitsService);
   protected readonly pad = pad;
+  protected readonly maxMilestones = MAX_MILESTONES;
 
   protected readonly goal = this.goals.goal;
   protected readonly saving = signal(false);
   protected readonly startText = signal('');
   protected readonly targetText = signal('');
+  private readonly rowTexts = signal<string[]>([]);
 
   protected readonly unit = computed(() => this.units.label(this.goal()?.unit ?? 'kg'));
   protected readonly locked = computed(() => { const g = this.goal(); return !!g && startLocked(g); });
+  private readonly sorted = computed(() => [...(this.goal()?.checkpoints ?? [])].sort((a, b) => a.index - b.index));
+  private readonly fixedCount = computed(() => { const g = this.goal(); return g ? lastDone(g)?.index ?? 0 : 0; });
   private readonly start = computed(() => this.parse(this.startText()));
-  private readonly target = computed(() => this.parse(this.targetText()));
+  private readonly gap = computed(() => displayGap(this.units.value(MIN_GAP[this.goal()?.metric ?? 'WEIGHT'], this.goal()?.unit ?? 'kg'), 1));
+
+  protected readonly rows = computed(() => {
+    const list = this.sorted();
+    return this.rowTexts().map((text, i) => {
+      const c = list[i];
+      return {
+        index: i + 1,
+        title: c?.rewardTitle?.trim() || `Milestone ${i + 1}`,
+        done: !!c && isDone(c),
+        status: c?.status === 'CLEARED' ? 'Cleared' : 'Pending',
+        text
+      };
+    });
+  });
+  private readonly openValues = computed(() => this.rowTexts().slice(this.fixedCount()).map(t => this.parseDisplay(t)));
+
   protected readonly error = computed(() => {
     const g = this.goal();
     const start = this.start();
-    const target = this.target();
     if (!g) return null;
-    if (start === null || target === null) return 'Enter both values.';
+    if (start === null) return 'Enter a start value.';
     const units = this.units.units();
-    return (this.locked() ? null : boundsError(g.metric, start, units, 'Start')) ?? boundsError(g.metric, target, units, 'Target')
-      ?? goalEditError(g, start, target, v => `${this.units.fmt(v, g.unit)} ${this.unit()}`);
+    const startProblem = this.locked() ? null : boundsError(g.metric, start, units, 'Start');
+    if (startProblem) return startProblem;
+    const open = this.openValues();
+    if (!open.length) return null;
+    for (const v of open) {
+      if (v !== null) {
+        const bounds = boundsError(g.metric, this.units.toMetric(v, g.unit), units, 'Milestone');
+        if (bounds) return bounds;
+      }
+    }
+    const list = this.sorted();
+    const fixed = this.fixedCount();
+    if (fixed && list.length && !beyond(g.path, list[0].targetValue, start)) {
+      return `The start must stay ${g.path === 'LOSE' ? 'above' : 'below'} milestone 1 (${this.show(list[0].targetValue)}).`;
+    }
+    const base = fixed ? this.units.value(list[fixed - 1].targetValue, g.unit) : this.units.value(start, g.unit);
+    return ownMilestonesError(open.map(v => v ?? NaN), base, g.path === 'LOSE', this.gap(), v => `${v.toFixed(1)} ${this.unit()}`, fixed + 1);
   });
   protected readonly range = computed(() => rangeText(this.goal()?.metric ?? 'WEIGHT', this.units.units()));
   protected readonly changed = computed(() => {
     const g = this.goal();
     const start = this.start();
-    const target = this.target();
-    return !!g && start !== null && target !== null && (Math.abs(start - g.startValue) > 0.01 || Math.abs(target - g.goalValue) > 0.01);
-  });
-  protected readonly preview = computed(() => {
-    const g = this.goal();
-    if (!g) return [];
-    const start = this.start() ?? g.startValue;
-    const target = this.target() ?? g.goalValue;
-    const values = this.error() ? g.checkpoints.map(c => c.targetValue) : respread(g, start, target);
-    return [...g.checkpoints].sort((a, b) => a.index - b.index).map((c, i) => ({
-      index: c.index,
-      title: c.rewardTitle?.trim() || `Milestone ${c.index}`,
-      done: isDone(c),
-      status: c.status === 'CLEARED' ? 'Cleared' : 'Pending',
-      value: values[i],
-      changed: Math.abs(values[i] - c.targetValue) > 0.01
-    }));
+    if (!g || start === null) return false;
+    const list = this.sorted();
+    const texts = this.rowTexts();
+    if (texts.length !== list.length) return true;
+    if (!this.locked() && Math.abs(start - g.startValue) > 0.01) return true;
+    return texts.some((t, i) => {
+      const v = this.parse(t);
+      return v === null || Math.abs(v - list[i].targetValue) > 0.01;
+    });
   });
 
   constructor() {
@@ -138,15 +172,46 @@ export class GoalEditPage {
     this.location.back();
   }
 
+  protected setStart(raw: string): void {
+    this.startText.set(raw);
+    if (!this.fixedCount()) this.spread();
+  }
+
+  protected setTarget(raw: string): void {
+    this.targetText.set(raw);
+    this.spread();
+  }
+
+  protected setRow(i: number, raw: string): void {
+    this.rowTexts.update(list => list.map((t, j) => (j === i ? raw : t)));
+    if (i === this.rowTexts().length - 1) this.targetText.set(raw);
+  }
+
+  protected add(): void {
+    const g = this.goal();
+    const texts = this.rowTexts();
+    if (!g || texts.length >= this.maxMilestones) return;
+    const values = texts.map(t => this.parseDisplay(t));
+    const last = values[values.length - 1];
+    if (last === null) return;
+    const before = values.length > 1 ? values[values.length - 2] : this.units.value(this.start() ?? g.startValue, g.unit);
+    const step = Math.max(this.gap(), before !== null ? Math.abs(last - before) : this.gap());
+    const next = Math.round((g.path === 'LOSE' ? last - step : last + step) * 10) / 10;
+    const text = next.toFixed(1);
+    this.rowTexts.set([...texts, text]);
+    this.targetText.set(text);
+  }
+
   protected async save(): Promise<void> {
     const g = this.goal();
     const start = this.start();
-    const target = this.target();
-    if (!g || start === null || target === null || this.error()) return;
+    const open = this.openValues();
+    if (!g || start === null || this.error() || open.some(v => v === null)) return;
+    const milestones = open.map(v => this.units.toMetric(v!, g.unit));
     this.saving.set(true);
     try {
       await this.goals.updateGoal({
-        goalValue: target,
+        ...(milestones.length ? { goalValue: milestones[milestones.length - 1], milestones } : {}),
         ...(this.locked() || Math.abs(start - g.startValue) <= 0.01 ? {} : { startValue: start })
       });
       this.toast.show('Goal updated.');
@@ -158,14 +223,43 @@ export class GoalEditPage {
     }
   }
 
+  private spread(): void {
+    const g = this.goal();
+    const target = this.parseDisplay(this.targetText());
+    const start = this.start();
+    const texts = this.rowTexts();
+    if (!g || target === null || start === null || !texts.length) return;
+    const fixed = this.fixedCount();
+    const open = texts.length - fixed;
+    if (open <= 0) return;
+    const list = this.sorted();
+    const base = fixed ? this.units.value(list[fixed - 1].targetValue, g.unit) : this.units.value(start, g.unit);
+    if (!beyond(g.path, target, base)) return;
+    this.rowTexts.set(texts.map((t, i) => {
+      const j = i - fixed;
+      if (j < 0) return t;
+      const v = j === open - 1 ? target : base + ((target - base) * (j + 1)) / open;
+      return (Math.round(v * 10) / 10).toFixed(1);
+    }));
+  }
+
   private fill(g: Goal): void {
     this.startText.set(this.units.fmt(g.startValue, g.unit));
     this.targetText.set(this.units.fmt(g.goalValue, g.unit));
+    this.rowTexts.set([...g.checkpoints].sort((a, b) => a.index - b.index).map(c => this.units.fmt(c.targetValue, g.unit)));
+  }
+
+  private show(v: number): string {
+    return `${this.units.fmt(v, this.goal()?.unit ?? 'kg')} ${this.unit()}`;
+  }
+
+  private parseDisplay(raw: string): number | null {
+    const v = parseFloat(raw.replace(',', '.'));
+    return Number.isFinite(v) && v > 0 ? v : null;
   }
 
   private parse(raw: string): number | null {
-    const v = parseFloat(raw.replace(',', '.'));
-    const unit = this.goal()?.unit ?? 'kg';
-    return Number.isFinite(v) && v > 0 ? this.units.toMetric(v, unit) : null;
+    const v = this.parseDisplay(raw);
+    return v === null ? null : this.units.toMetric(v, this.goal()?.unit ?? 'kg');
   }
 }

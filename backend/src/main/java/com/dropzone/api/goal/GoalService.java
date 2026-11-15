@@ -143,7 +143,7 @@ public class GoalService {
 		String unit = req.unit() == null || req.unit().isBlank() ? MetricBounds.unit(metric) : req.unit().trim();
 		String label = req.metricLabel() != null ? blankToNull(req.metricLabel()) : sameMetric ? old.metricLabel : null;
 		validate(user.path, metric, unit, start, req.goalValue());
-		Goal goal = create(user, user.path, metric, label, unit, start, req.goalValue(), req.checkpoints(),
+		Goal goal = create(user, user.path, metric, label, unit, start, req.goalValue(), req.checkpoints(), req.milestones(),
 				!sameMetric || req.startValue() != null);
 		return toDto(goal);
 	}
@@ -206,7 +206,12 @@ public class GoalService {
 			}
 			start = req.startValue();
 		}
-		respread(goal, list, start, target);
+		if (req.milestones() != null && !req.milestones().isEmpty()) {
+			target = setMilestones(goal, list, start, req.milestones());
+		}
+		else {
+			respread(goal, list, start, target);
+		}
 		if (Math.abs(goal.currentValue - goal.startValue) < 1e-9) {
 			goal.currentValue = start;
 		}
@@ -252,6 +257,67 @@ public class GoalService {
 		}
 	}
 
+	private double setMilestones(Goal goal, List<Checkpoint> list, double start, List<Double> values) {
+		Checkpoint lastFixed = null;
+		for (Checkpoint cp : list) {
+			if (cp.submitted()) {
+				lastFixed = cp;
+			}
+		}
+		int fixedIndex = lastFixed == null ? 0 : lastFixed.index;
+		List<Checkpoint> open = list.stream().filter(c -> c.index > fixedIndex).toList();
+		if (values.size() < open.size()) {
+			throw ApiException.validation("Milestones can't be removed");
+		}
+		if (fixedIndex + values.size() > CheckpointPlanner.MAX) {
+			throw ApiException.validation("A goal has at most " + CheckpointPlanner.MAX + " milestones");
+		}
+		if (lastFixed != null && !beyond(goal.path, list.get(0).targetValue, start)) {
+			throw ApiException.validation("The start value must stay " + (goal.path == Path.LOSE ? "above " : "below ")
+					+ "milestone 1 (" + fmt(list.get(0).targetValue, goal.unit) + ")");
+		}
+		double base = lastFixed == null ? start : lastFixed.targetValue;
+		checkMilestones(goal.path, goal.metric, goal.unit, base, lastFixed == null ? "the start" : "milestone " + fixedIndex, values);
+		for (int j = 0; j < open.size(); j++) {
+			open.get(j).targetValue = values.get(j);
+		}
+		if (values.size() > open.size()) {
+			User user = users.get(goal.userId);
+			boolean pro = users.isPro(user);
+			PostVisibility visibility = pro ? defaultVisibility(user) : PostVisibility.PRIVATE;
+			Verification verification = pro && visibility != PostVisibility.PRIVATE ? user.defaultVerification : Verification.AI;
+			boolean active = list.stream().anyMatch(c -> c.status == CheckpointStatus.ACTIVE);
+			for (int j = open.size(); j < values.size(); j++) {
+				Checkpoint cp = new Checkpoint();
+				cp.id = UUID.randomUUID();
+				cp.goalId = goal.id;
+				cp.index = fixedIndex + j + 1;
+				cp.targetValue = values.get(j);
+				cp.setVisibility(visibility);
+				cp.verification = verification;
+				cp.status = active ? CheckpointStatus.LOCKED : CheckpointStatus.ACTIVE;
+				active = true;
+				checkpoints.save(cp);
+			}
+		}
+		return values.getLast();
+	}
+
+	private static void checkMilestones(Path path, Metric metric, String unit, double base, String from, List<Double> values) {
+		double gap = MetricBounds.minGap(metric);
+		double previous = base;
+		for (int i = 0; i < values.size(); i++) {
+			double value = values.get(i);
+			MetricBounds.check(metric, value, "milestone");
+			if (!beyond(path, value, previous) || Math.abs(value - previous) < gap - 1e-6) {
+				String after = i == 0 ? from : "the milestone before it";
+				throw ApiException.validation("Each milestone must be " + direction(path) + after + " (" + fmt(previous, unit) + "), at least "
+						+ MetricBounds.format(metric, gap) + " apart");
+			}
+			previous = value;
+		}
+	}
+
 	private void setTarget(Goal goal, Checkpoint cp, double value) {
 		if (cp.submitted()) {
 			throw ApiException.conflict("This milestone is already done, its target can't change");
@@ -287,11 +353,17 @@ public class GoalService {
 	@Transactional
 	public Goal create(User user, Requests.Onboarding req) {
 		return create(user, req.path(), req.metric(), blankToNull(req.metricLabel()), req.unit().trim(), req.startValue(), req.goalValue(),
-				req.checkpoints(), true);
+				req.checkpoints(), req.milestones(), true);
 	}
 
 	private Goal create(User user, Path path, Metric metric, String metricLabel, String unit, double start, double target, int count,
-			boolean recordStart) {
+			List<Double> milestones, boolean recordStart) {
+		if (milestones != null) {
+			if (Math.abs(milestones.getLast() - target) > 1e-6) {
+				throw ApiException.validation("The last milestone must be the goal value");
+			}
+			checkMilestones(path, metric, unit, start, "the start", milestones);
+		}
 		Instant now = clock.instant();
 		List<Goal> previous = goals.findByUserIdAndActiveTrue(user.id);
 		for (Goal old : previous) {
@@ -316,7 +388,8 @@ public class GoalService {
 		goal = goals.save(goal);
 		PostVisibility visibility = pro ? defaultVisibility(user) : PostVisibility.PRIVATE;
 		Verification verification = pro && visibility != PostVisibility.PRIVATE ? user.defaultVerification : Verification.AI;
-		List<Double> targets = CheckpointPlanner.plan(goal.startValue, goal.goalValue, count, MetricBounds.minGap(goal.metric));
+		List<Double> targets = milestones != null ? milestones
+				: CheckpointPlanner.plan(goal.startValue, goal.goalValue, count, MetricBounds.minGap(goal.metric));
 		for (int i = 0; i < targets.size(); i++) {
 			Checkpoint cp = new Checkpoint();
 			cp.id = UUID.randomUUID();

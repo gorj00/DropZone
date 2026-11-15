@@ -16,6 +16,7 @@ import { BillingService, planLabel } from '../../core/native/billing';
 import { HealthService } from '../../core/native/health';
 import { LockService } from '../../core/native/lock';
 import { PushService } from '../../core/native/push';
+import { ReviewService } from '../../core/native/review';
 import { PromptService } from '../../core/prompt.service';
 import { RegionService } from '../../core/region';
 import { SessionStore } from '../../core/session.store';
@@ -140,6 +141,15 @@ type Flag = 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'shareStats' | (type
             <button class="w-full px-3.5 h-[46px] flex items-center gap-3 text-left text-[13.5px] font-semibold text-mute" [disabled]="busy()" (click)="restore()">
               <app-icon name="refresh" [size]="16" /><span class="flex-1">Restore purchases</span>
             </button>
+          </div>
+        </div>
+
+        <div class="pad mt-4">
+          <div class="lbl mb-2">Goal</div>
+          <div class="card">
+            <a class="w-full flex items-center gap-3 px-3.5 h-[50px]" routerLink="/goal/edit">
+              <app-icon name="target" [size]="18" /><span class="flex-1 font-semibold text-[14.5px]">Edit goal</span><span class="text-mute inline-flex"><app-icon name="chev" [size]="16" /></span>
+            </a>
           </div>
         </div>
 
@@ -420,6 +430,11 @@ type Flag = 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'shareStats' | (type
                 <span class="flex-1 font-semibold text-[14.5px]">Privacy Policy</span><span class="text-mute inline-flex"><app-icon name="chev" [size]="16" /></span>
               </button>
             }
+            @if (review.canOpenStore) {
+              <button class="w-full flex items-center gap-3 px-3.5 h-[50px] text-left" (click)="rate()">
+                <app-icon name="heart" [size]="18" /><span class="flex-1 font-semibold text-[14.5px]">Rate DropZone</span><span class="text-mute inline-flex"><app-icon name="chev" [size]="16" /></span>
+              </button>
+            }
             <button class="w-full flex items-center gap-3 px-3.5 h-[56px] text-left" [disabled]="exporting()" (click)="exportData()">
               <app-icon name="download" [size]="18" />
               <span class="flex-1 min-w-0">
@@ -478,6 +493,7 @@ export class SettingsPage {
   protected readonly eu = this.region.eu;
   private readonly audience = inject(AudienceService);
   private readonly goals = inject(GoalStore);
+  protected readonly review = inject(ReviewService);
   private resumeHandle: PluginListenerHandle | null = null;
 
   protected readonly user = this.session.user;
@@ -951,6 +967,14 @@ export class SettingsPage {
 
   protected openDelete(): void {
     this.deleting.set(true);
+  }
+
+  protected async rate(): Promise<void> {
+    try {
+      await this.review.openStore();
+    } catch (e) {
+      this.toast.error(e);
+    }
   }
 
   protected async exportData(): Promise<void> {

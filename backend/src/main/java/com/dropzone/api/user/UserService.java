@@ -160,7 +160,9 @@ public class UserService {
 				user.willRenew && user.isSubscribed(now), user.proProductId, user.billingIssueAt != null, user.isProEndPending(now),
 				user.skipRestDays, user.hiddenFromSearch, user.hiddenFromLeaderboards, user.verifyRequestPushes, user.commentPushes,
 				user.shareStats, user.billingHold && !user.isSubscribed(now), user.pendingPlan(now), user.pendingPlan(now) == null ? null : user.pendingSwitchAt,
-				user.reminderPushes, user.deadlinePushes, user.hypePushes, user.friendPushes, user.proofResultPushes);
+				user.reminderPushes, user.deadlinePushes, user.hypePushes, user.friendPushes, user.proofResultPushes,
+				user.reviewPromptedAt != null, user.reviewPromptedAt == null && user.onboarded && progress.hadCompleteDayBefore(user, today(user)),
+				user.feedFilter);
 	}
 
 	private static void setShareStats(User user, boolean share, Instant now) {
@@ -339,6 +341,12 @@ public class UserService {
 		}
 		if (req.proofResultPushes() != null) {
 			user.proofResultPushes = req.proofResultPushes();
+		}
+		if (Boolean.TRUE.equals(req.reviewPrompted()) && user.reviewPromptedAt == null) {
+			user.reviewPromptedAt = clock.instant();
+		}
+		if (req.feedFilter() != null) {
+			user.feedFilter = req.feedFilter();
 		}
 		if (req.shareStats() != null) {
 			setShareStats(user, req.shareStats(), clock.instant());

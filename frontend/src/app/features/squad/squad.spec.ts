@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, ParamMap, convertToParamMap, provideRouter } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { ApiService } from '../../core/api/api.service';
-import { FeedItem, FeedScope, Page, Period, User } from '../../core/api/models';
+import { FeedItem, FeedScope, Page, Path, Period, User, UserPatch } from '../../core/api/models';
 import { LockService } from '../../core/native/lock';
 import { SessionStore } from '../../core/session.store';
 import { SquadPage } from './squad';
@@ -16,13 +16,14 @@ const item = (id: string): FeedItem => ({
   hidden: false, aiChecked: false, isPublic: true
 });
 
-type FeedFn = (scope: FeedScope, cursor?: string, limit?: number) => Promise<Page<FeedItem>>;
+type FeedFn = (scope: FeedScope, cursor?: string, limit?: number, path?: Path) => Promise<Page<FeedItem>>;
 
 async function render(feed: FeedFn, query: BehaviorSubject<ParamMap> | null = null) {
   const api = {
     feed: vi.fn(feed),
     pendingCount: vi.fn().mockResolvedValue({ count: 2 }),
     friendRequests: vi.fn().mockResolvedValue({ incoming: [], outgoing: [] }),
+    updateMe: vi.fn((patch: UserPatch) => Promise.resolve({ id: 'me', path: 'LOSE', pro: true, onboarded: true, theme: 'NEON', timezone: tz, lockedApps: [], ...patch })),
     leaderboard: vi.fn((p: Period) => Promise.resolve({ period: p, path: 'LOSE', metric: 'WEIGHT', unit: 'kg', endsAt: new Date().toISOString(), entries: [], me: null }))
   };
   TestBed.configureTestingModule({
@@ -72,7 +73,7 @@ describe('SquadPage', () => {
     const { api, page, settle } = await render((_s, cursor) => Promise.resolve(cursor ? { items: [], next: null } : { items: [item('a')], next: 'c1' }));
     page.more();
     await settle();
-    expect(api.feed).toHaveBeenLastCalledWith('FRIENDS', 'c1', 20);
+    expect(api.feed).toHaveBeenLastCalledWith('FRIENDS', 'c1', 20, 'LOSE');
   });
 
   it('opens the to-verify list from the chip', async () => {
@@ -82,7 +83,7 @@ describe('SquadPage', () => {
     buttonWith('2 to verify')!.click();
     await settle();
 
-    expect(api.feed).toHaveBeenLastCalledWith('TO_VERIFY', undefined, 20);
+    expect(api.feed).toHaveBeenLastCalledWith('TO_VERIFY', undefined, 20, undefined);
     expect(el.textContent).toContain('Proofs you can verify');
     expect(el.textContent).toContain('Post v1');
   });
@@ -92,19 +93,19 @@ describe('SquadPage', () => {
     const { api, el } = await render(scope => Promise.resolve({ items: scope === 'TO_VERIFY' ? [item('v1')] : [], next: null }), query);
 
     expect(api.feed).toHaveBeenCalledTimes(1);
-    expect(api.feed).toHaveBeenCalledWith('TO_VERIFY', undefined, 20);
+    expect(api.feed).toHaveBeenCalledWith('TO_VERIFY', undefined, 20, undefined);
     expect(el.textContent).toContain('Proofs you can verify');
   });
 
   it('switches to the to-verify list when the link arrives on an open Community tab', async () => {
     const query = new BehaviorSubject(convertToParamMap({}));
     const { api, el, settle } = await render(scope => Promise.resolve({ items: scope === 'TO_VERIFY' ? [item('v1')] : [], next: null }), query);
-    expect(api.feed).toHaveBeenLastCalledWith('FRIENDS', undefined, 20);
+    expect(api.feed).toHaveBeenLastCalledWith('FRIENDS', undefined, 20, 'LOSE');
 
     query.next(convertToParamMap({ show: 'verify' }));
     await settle();
 
-    expect(api.feed).toHaveBeenLastCalledWith('TO_VERIFY', undefined, 20);
+    expect(api.feed).toHaveBeenLastCalledWith('TO_VERIFY', undefined, 20, undefined);
     expect(el.textContent).toContain('Post v1');
   });
 
@@ -143,5 +144,29 @@ describe('SquadPage', () => {
     expect(api.feed.mock.calls[1][1]).toBeUndefined();
     expect(el.textContent).toContain('Post fresh');
     expect(el.textContent).not.toContain('Post old');
+  });
+
+  it('opens the filter from its icon, filters by your own goal type first and remembers the choice', async () => {
+    const { api, settle, buttonWith, el } = await render(() => Promise.resolve({ items: [], next: null }));
+    expect(api.feed).toHaveBeenLastCalledWith('FRIENDS', undefined, 20, 'LOSE');
+    const icon = el.querySelector('button[aria-label="Filter posts"]') as HTMLButtonElement;
+    expect(buttonWith('Build muscle')).toBeUndefined();
+
+    icon.click();
+    await settle();
+    expect(icon.getAttribute('aria-expanded')).toBe('true');
+    expect(buttonWith('Weight loss')!.getAttribute('aria-checked')).toBe('true');
+
+    buttonWith('Build muscle')!.click();
+    await settle();
+    expect(api.feed).toHaveBeenLastCalledWith('FRIENDS', undefined, 20, 'GAIN');
+    expect(api.updateMe).toHaveBeenCalledWith({ feedFilter: 'GAIN' });
+    expect(buttonWith('Build muscle')).toBeUndefined();
+
+    icon.click();
+    await settle();
+    buttonWith('All')!.click();
+    await settle();
+    expect(api.feed).toHaveBeenLastCalledWith('FRIENDS', undefined, 20, undefined);
   });
 });

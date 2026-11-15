@@ -7,6 +7,7 @@ import com.dropzone.api.common.Dtos.ProofViewDto;
 import com.dropzone.api.common.Paged;
 import com.dropzone.api.common.Requests;
 import com.dropzone.api.domain.FeedScope;
+import com.dropzone.api.domain.Path;
 import jakarta.validation.Valid;
 import java.time.Instant;
 import java.util.List;
@@ -37,8 +38,8 @@ public class FeedController {
 	@GetMapping("/feed")
 	ResponseEntity<List<FeedItemDto>> list(@CurrentUser UUID userId, @RequestParam(defaultValue = "FRIENDS") FeedScope scope,
 			@RequestParam(required = false) Instant before, @RequestParam(required = false) String cursor,
-			@RequestParam(required = false) Integer limit) {
-		return Paged.response(feed.list(userId, scope, before, cursor, limit));
+			@RequestParam(required = false) Integer limit, @RequestParam(required = false) Path path) {
+		return Paged.response(feed.list(userId, scope, before, cursor, limit, path));
 	}
 
 	@GetMapping("/feed/{id}")

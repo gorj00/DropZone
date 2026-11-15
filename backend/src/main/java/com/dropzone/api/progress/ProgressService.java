@@ -152,6 +152,10 @@ public class ProgressService {
 	}
 
 	@Transactional(readOnly = true)
+	public boolean hadCompleteDayBefore(User user, LocalDate day) {
+		return dailyResults.hasCompleteDayBefore(user.id, day);
+	}
+
 	public boolean clearedBeforeProEnded(User user, LocalDate day) {
 		return !user.isProActive(clock.instant()) && dailyResults.findById(new DailyResult.Key(user.id, day))
 				.filter(r -> r.proClearedAt != null && r.complete()).isPresent();

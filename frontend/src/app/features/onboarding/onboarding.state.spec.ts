@@ -128,6 +128,32 @@ describe('OnboardingState preview', () => {
   });
 });
 
+describe('own milestone values at onboarding', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('sends the values you set and drops them when the plan changes', () => {
+    const { state } = setup();
+    state.setWeightUnit('KG');
+    state.path.set('LOSE');
+    state.start.set(90);
+    state.goal.set(80);
+    state.checkpoints.set(3);
+    expect(state.request().milestones).toBeUndefined();
+
+    state.setOwnMilestones([88, 84, 80]);
+    expect(state.valid()).toBe(true);
+    expect(state.request().milestones).toEqual([88, 84, 80]);
+
+    state.setOwnMilestones([88, 89, 80]);
+    expect(state.milestoneProblem()).toContain('Milestone 2');
+    expect(state.valid()).toBe(false);
+
+    state.checkpoints.set(4);
+    expect(state.ownMilestones()).toBeNull();
+    expect(state.request().milestones).toBeUndefined();
+  });
+});
+
 describe('onboarding draft', () => {
   beforeEach(() => localStorage.clear());
 

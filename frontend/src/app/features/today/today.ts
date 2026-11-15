@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api/api.service';
 import { SlipUp, TodayQuest } from '../../core/api/models';
 import { openExternal, playSubscriptionsUrl } from '../../core/config.service';
 import { HEALTH_NAME, storeOf } from '../../core/platform';
 import { LockService } from '../../core/native/lock';
+import { ReviewService } from '../../core/native/review';
 import { PendingProofs } from '../../core/pending-proof';
 import { PromptService } from '../../core/prompt.service';
 import { ProofService } from '../../core/proof.service';
@@ -310,6 +311,14 @@ export class TodayPage implements OnInit {
   private readonly api = inject(ApiService);
   private readonly prompt = inject(PromptService);
   private readonly pendingProofs = inject(PendingProofs);
+  private readonly review = inject(ReviewService);
+
+  private readonly askForReview = effect(() => {
+    const u = this.session.user();
+    const t = this.store.today();
+    if (!u || u.reviewPrompted) return;
+    if (u.reviewDue || (!!t && t.totalCount > 0 && t.doneCount >= t.totalCount)) untracked(() => void this.review.promptOnce());
+  });
 
   protected readonly busy = busy;
   protected readonly showBell = computed(() => this.session.pro() || this.notifications.unread() > 0);

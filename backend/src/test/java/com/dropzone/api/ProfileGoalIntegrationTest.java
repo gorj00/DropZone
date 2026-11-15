@@ -9,6 +9,19 @@ import org.junit.jupiter.api.Test;
 class ProfileGoalIntegrationTest extends IntegrationTest {
 
 	@Test
+	void theRatingPromptIsDueAfterAFullDayUntilItWasShown() throws Exception {
+		Session user = login("RateMe");
+		onboardLose(user, 2, "WEIGH_IN");
+		get(user, "/api/v1/me").andExpect(jsonPath("$.reviewDue").value(false)).andExpect(jsonPath("$.reviewPrompted").value(false));
+		jdbc.update("insert into daily_results (user_id, day, done_count, total_count) values (?, current_date - 3, 1, 2)", user.id());
+		get(user, "/api/v1/me").andExpect(jsonPath("$.reviewDue").value(false));
+		jdbc.update("insert into daily_results (user_id, day, done_count, total_count) values (?, current_date - 2, 2, 2)", user.id());
+		get(user, "/api/v1/me").andExpect(jsonPath("$.reviewDue").value(true));
+		patch(user, "/api/v1/me", "{\"reviewPrompted\":true}").andExpect(status().isOk()).andExpect(jsonPath("$.reviewPrompted").value(true))
+				.andExpect(jsonPath("$.reviewDue").value(false));
+	}
+
+	@Test
 	void handleAvailabilityAndUniqueness() throws Exception {
 		Session first = login("HandleOwner");
 		Session second = login("HandleSeeker");
