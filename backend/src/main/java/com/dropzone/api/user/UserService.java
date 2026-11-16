@@ -22,6 +22,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -162,7 +163,14 @@ public class UserService {
 				user.shareStats, user.billingHold && !user.isSubscribed(now), user.pendingPlan(now), user.pendingPlan(now) == null ? null : user.pendingSwitchAt,
 				user.reminderPushes, user.deadlinePushes, user.hypePushes, user.friendPushes, user.proofResultPushes,
 				user.reviewPromptedAt != null, user.reviewPromptedAt == null && user.onboarded && progress.hadCompleteDayBefore(user, today(user)),
-				user.feedFilter);
+				user.feedFilter, signIns(user));
+	}
+
+	private static List<String> signIns(User user) {
+		List<String> list = new ArrayList<>();
+		if (user.googleSub != null) list.add("GOOGLE");
+		if (user.appleSub != null) list.add("APPLE");
+		return list;
 	}
 
 	private static void setShareStats(User user, boolean share, Instant now) {

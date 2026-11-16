@@ -29,6 +29,7 @@ import { AppTile, LOCKABLE_APPS, LockableApp } from '../../ui/app-tile';
 import { Avatar, ProTag } from '../../ui/bits';
 import { Icon } from '../../ui/icon';
 import { ProfileForm, cleanHandle } from '../../ui/profile-form';
+import { SignInLogo } from '../../ui/sign-in-logo';
 import { GoalKind, QuestSchedule, daysLabel, goalKindOf, goalOf, goalText } from '../../ui/quest-schedule';
 import { DeleteAccountSheet } from './delete-account';
 
@@ -38,7 +39,7 @@ type Flag = 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'shareStats' | (type
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, NgTemplateOutlet, AppTile, Avatar, ProTag, Icon, ApWarning, QuestSchedule, ProfileForm, DeleteAccountSheet],
+  imports: [RouterLink, NgTemplateOutlet, AppTile, Avatar, ProTag, Icon, ApWarning, QuestSchedule, ProfileForm, DeleteAccountSheet, SignInLogo],
   template: `
     <div class="screen pb-[calc(32px+env(safe-area-inset-bottom))]">
       <div class="pad h-[58px] flex items-center gap-3">
@@ -48,19 +49,39 @@ type Flag = 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'shareStats' | (type
 
       <div class="pad mt-2">
         <div class="lbl mb-2">Profile</div>
-        <div class="card px-3.5 py-4">
+        <div class="card px-3.5 py-3.5">
           @if (user(); as u) {
-            <div class="flex items-center gap-3 mb-4">
-              <app-avatar [url]="u.avatarUrl" [name]="u.displayName" [size]="56" />
-              <div class="flex-1 min-w-0">
-                <div class="font-bold text-[14.5px] leading-tight">Profile photo</div>
-                <div class="text-[12px] text-mute">{{ u.avatarUrl ? 'Tap change to pick a new one' : 'Showing your initials' }}</div>
-              </div>
-              <button class="btn btn-ghost btn-sm !w-auto !px-3" [disabled]="avatar.busy()" (click)="avatar.change()">{{ avatar.busy() ? 'Saving…' : 'Change' }}</button>
+            <div class="flex items-center gap-3 cursor-pointer" (click)="profileOpen.set(!profileOpen())">
+              <button class="relative shrink-0 rounded-full" [class.opacity-60]="avatar.busy()" [disabled]="avatar.busy()" aria-label="Change profile photo"
+                (click)="$event.stopPropagation(); avatar.change()">
+                <app-avatar [url]="u.avatarUrl" [name]="u.displayName" [size]="56" />
+                <span class="absolute -right-1 -bottom-1 grid place-items-center w-[24px] h-[24px] rounded-full bg-accent text-white border-2 border-[var(--s1)]"><app-icon name="edit" [size]="12" /></span>
+              </button>
+              <button class="flex-1 min-w-0 text-left" [attr.aria-expanded]="profileOpen()" aria-label="Profile details">
+                <span class="block font-bold text-[14.5px] leading-tight truncate">{{ u.displayName }}</span>
+                <span class="block text-[12px] text-mute truncate">&#64;{{ u.handle }}</span>
+              </button>
+              <span class="text-mute inline-flex transition-transform" [class.rotate-90]="profileOpen()"><app-icon name="chev" [size]="16" /></span>
             </div>
+            @if (profileOpen()) {
+              <div class="mt-4">
+                <app-profile-form [(name)]="profileName" [(handle)]="profileHandle" [(bio)]="profileBio" [savedHandle]="u.handle">
+                  <label class="block mt-4">
+                    <span class="lbl block mb-1.5">Email</span>
+                    <span class="relative block">
+                      @if (signIns().length) {
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-mute" role="group" aria-label="Signed in with">
+                          @for (s of signIns(); track s) { <app-sign-in-logo [provider]="s" /> }
+                        </span>
+                      }
+                      <input class="field !text-mute" type="email" readonly [value]="u.email" [style.padding-left.px]="signIns().length ? 22 + signIns().length * 24 : null">
+                    </span>
+                  </label>
+                </app-profile-form>
+                <button class="btn btn-primary btn-sm mt-4" [disabled]="busy() || !profileDirty() || !profileForm()?.valid()" (click)="saveProfile()">Save profile</button>
+              </div>
+            }
           }
-          <app-profile-form [(name)]="profileName" [(handle)]="profileHandle" [(bio)]="profileBio" [savedHandle]="user()?.handle" />
-          <button class="btn btn-primary btn-sm mt-4" [disabled]="busy() || !profileDirty() || !profileForm()?.valid()" (click)="saveProfile()">Save profile</button>
         </div>
       </div>
 
@@ -412,9 +433,6 @@ type Flag = 'hiddenFromSearch' | 'hiddenFromLeaderboards' | 'shareStats' | (type
         <div class="pad mt-4">
           <div class="lbl mb-2">Account</div>
           <div class="card divide-y divide-line">
-            <div class="flex items-center gap-3 px-3.5 h-[50px]">
-              <span class="flex-1 font-semibold text-[14.5px] truncate">{{ u.email }}</span>
-            </div>
             @if (u.admin) {
               <a class="w-full flex items-center gap-3 px-3.5 h-[50px]" routerLink="/admin/reports">
                 <app-icon name="flag" [size]="18" /><span class="flex-1 font-semibold text-[14.5px]">Review reports</span><app-icon name="chev" [size]="16" />
@@ -508,6 +526,8 @@ export class SettingsPage {
   protected readonly open = signal<Section | null>(null);
   protected readonly blocked = signal<UserSummary[] | null>(null);
   protected readonly busy = signal(false);
+  protected readonly profileOpen = signal(false);
+  protected readonly signIns = computed(() => this.user()?.signIns ?? []);
   protected readonly profileForm = viewChild(ProfileForm);
   protected readonly profileName = signal(this.session.user()?.displayName ?? '');
   protected readonly profileHandle = signal(cleanHandle(this.session.user()?.handle ?? ''));

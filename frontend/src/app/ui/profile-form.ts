@@ -31,6 +31,7 @@ export function cleanHandle(raw: string): string {
         {{ handleHint() }}
       </span>
     </label>
+    <ng-content />
     <label class="block mt-4">
       <span class="flex items-baseline justify-between mb-1.5"><span class="lbl">Bio</span><span class="text-[11px] text-mute num">{{ bio().length }}/{{ max }}</span></span>
       <textarea class="field !h-[92px] py-3 resize-none leading-snug" [attr.maxlength]="max" placeholder="Optional. What are you working towards?"

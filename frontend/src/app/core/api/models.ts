@@ -75,7 +75,10 @@ export interface User {
   reviewDue?: boolean;
   feedFilter?: FeedFilter | null;
   shareStats?: boolean;
+  signIns?: SignIn[];
 }
+
+export type SignIn = 'GOOGLE' | 'APPLE';
 
 export interface AppConfig {
   minVersionCode: number;

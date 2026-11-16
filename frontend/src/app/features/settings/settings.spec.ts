@@ -6,6 +6,7 @@ import { signal } from '@angular/core';
 import { API_URL } from '../../core/api/api.service';
 import { User } from '../../core/api/models';
 import { authInterceptor } from '../../core/auth';
+import { AvatarService } from '../../core/avatar.service';
 import { LockService } from '../../core/native/lock';
 import { DataExportService } from '../../core/data-export';
 import { APP_SETTINGS, PUSH } from '../../core/native/push';
@@ -68,6 +69,8 @@ describe('SettingsPage handle check', () => {
 
   it('checks the handle only after it is edited', async () => {
     const { el, http, settle, session } = await render({ handle: 'jake.lifts', displayName: 'Jake' });
+    (el.querySelector('button[aria-label="Profile details"]') as HTMLButtonElement).click();
+    await settle();
     await new Promise(r => setTimeout(r, 450));
     http.expectNone(r => r.url.endsWith('/users/handle-available'));
     expect(el.textContent).not.toContain('Available');
@@ -78,6 +81,43 @@ describe('SettingsPage handle check', () => {
     const check = await vi.waitFor(() => http.expectOne(r => r.url.endsWith('/users/handle-available')));
     expect(check.request.body).toEqual({ handle: 'jake.lifts2' });
     check.flush({ handle: 'jake.lifts2', valid: true, available: true, message: null });
+    await session.clear();
+  });
+
+  it('starts collapsed and shows the read-only email under the handle when opened', async () => {
+    const { el, settle, text, session } = await render({ handle: 'jake.lifts', displayName: 'Jake', email: 'jake@test.dev', signIns: ['GOOGLE', 'APPLE'] });
+    expect(text()).toContain('Jake@jake.lifts');
+    expect(el.querySelector('input[autocomplete="username"]')).toBeNull();
+    expect(text()).not.toContain('jake@test.dev');
+    const toggle = el.querySelector('button[aria-label="Profile details"]') as HTMLButtonElement;
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    toggle.click();
+    await settle();
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    const handle = el.querySelector('input[autocomplete="username"]') as HTMLInputElement;
+    const email = el.querySelector('input[type="email"]') as HTMLInputElement;
+    const bio = el.querySelector('textarea') as HTMLTextAreaElement;
+    expect(email.value).toBe('jake@test.dev');
+    expect(email.readOnly).toBe(true);
+    expect(handle.compareDocumentPosition(email) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(email.compareDocumentPosition(bio) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect([...el.querySelectorAll('app-sign-in-logo')].map(l => l.getAttribute('aria-label'))).toEqual(['Google', 'Apple']);
+    expect(text()).not.toContain('Signed in with');
+    toggle.click();
+    await settle();
+    expect(el.querySelector('input[type="email"]')).toBeNull();
+    await session.clear();
+  });
+
+  it('changes the photo from the avatar without opening the profile', async () => {
+    const { el, settle, button, session } = await render({ handle: 'jake.lifts', displayName: 'Jake' });
+    const change = vi.spyOn(TestBed.inject(AvatarService), 'change').mockResolvedValue(undefined);
+    expect(button('Change')).toBeUndefined();
+    (el.querySelector('button[aria-label="Change profile photo"]') as HTMLButtonElement).click();
+    await settle();
+    expect(change).toHaveBeenCalledTimes(1);
+    expect(el.querySelector('button[aria-label="Profile details"]')?.getAttribute('aria-expanded')).toBe('false');
+    expect(el.querySelector('input[autocomplete="username"]')).toBeNull();
     await session.clear();
   });
 });

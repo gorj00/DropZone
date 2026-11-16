@@ -26,7 +26,9 @@ class AppleAuthIntegrationTest extends IntegrationTest {
 				.andExpect(jsonPath("$.token").isNotEmpty())
 				.andExpect(jsonPath("$.user.email").value(mail.toLowerCase()))
 				.andExpect(jsonPath("$.user.displayName").value("Ann Apple"))
-				.andExpect(jsonPath("$.user.admin").value(false));
+				.andExpect(jsonPath("$.user.admin").value(false))
+				.andExpect(jsonPath("$.user.signIns.length()").value(1))
+				.andExpect(jsonPath("$.user.signIns[0]").value("APPLE"));
 		assertThat(jdbc.queryForObject("select apple_sub from users where email = ?", String.class, mail.toLowerCase())).isEqualTo(sub);
 		assertThat(jdbc.queryForObject("select google_sub from users where email = ?", String.class, mail.toLowerCase())).isNull();
 
@@ -47,7 +49,10 @@ class AppleAuthIntegrationTest extends IntegrationTest {
 		assertThat(viaApple.id()).isEqualTo(viaGoogle.id());
 		assertThat(jdbc.queryForObject("select apple_sub from users where id = ?", String.class, viaGoogle.id())).isEqualTo(appleSub);
 		assertThat(jdbc.queryForObject("select google_sub from users where id = ?", String.class, viaGoogle.id())).isEqualTo(googleSub);
-		get(viaApple, "/api/v1/me").andExpect(status().isOk()).andExpect(jsonPath("$.displayName").value("Both"));
+		get(viaApple, "/api/v1/me").andExpect(status().isOk()).andExpect(jsonPath("$.displayName").value("Both"))
+				.andExpect(jsonPath("$.signIns.length()").value(2))
+				.andExpect(jsonPath("$.signIns[0]").value("GOOGLE"))
+				.andExpect(jsonPath("$.signIns[1]").value("APPLE"));
 
 		assertThat(googleLogin(googleSub, mail, "Both").id()).isEqualTo(viaGoogle.id());
 		assertThat(appleLogin(appleSub, mail, null).id()).isEqualTo(viaGoogle.id());
