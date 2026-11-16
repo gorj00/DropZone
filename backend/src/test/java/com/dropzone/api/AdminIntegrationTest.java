@@ -106,9 +106,8 @@ class AdminIntegrationTest extends IntegrationTest {
 		get(admin, "/api/v1/admin/users/" + zed.id() + "/days").andExpect(status().isOk())
 				.andExpect(jsonPath("$[0].day").value(LocalDate.now(ZoneOffset.UTC).toString()))
 				.andExpect(jsonPath("$[0].weight").value(89.5))
-				.andExpect(jsonPath("$[0].completions[0].questName").isString())
-				.andExpect(jsonPath("$[0].completions[0].value").value(9000.0))
-				.andExpect(jsonPath("$[0].completions[0].status").value("DONE"));
+				.andExpect(jsonPath("$[0].completions[?(@.questName == 'Steps')].value").value(org.hamcrest.Matchers.contains(9000.0)))
+				.andExpect(jsonPath("$[0].completions[?(@.questName == 'Steps')].status").value(org.hamcrest.Matchers.contains("DONE")));
 		get(admin, "/api/v1/admin/users/" + zed.id() + "/days?from=2026-02-01&to=2026-01-01").andExpect(status().isBadRequest());
 		get(admin, "/api/v1/admin/users/" + UUID.randomUUID() + "/account").andExpect(status().isNotFound());
 	}
