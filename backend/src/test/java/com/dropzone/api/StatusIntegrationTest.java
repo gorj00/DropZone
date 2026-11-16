@@ -4,10 +4,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.dropzone.api.config.DatabaseWaitTracker;
+import com.zaxxer.hikari.HikariDataSource;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 class StatusIntegrationTest extends IntegrationTest {
+
+	@Autowired
+	private DataSource dataSource;
 
 	@Test
 	void statusNeedsTheTokenAndListsFailedJobs() throws Exception {
@@ -33,5 +40,10 @@ class StatusIntegrationTest extends IntegrationTest {
 		runJob("daily-reminders");
 		mvc.perform(MockMvcRequestBuilders.get("/internal/status").header("Authorization", "Bearer " + STATUS_TOKEN)).andExpect(status().isOk())
 				.andExpect(jsonPath("$.failedJobs.length()").value(0));
+	}
+
+	@Test
+	void thePoolReportsItsWaitsToTheCapacityCounter() {
+		assertThat(((HikariDataSource) dataSource).getMetricsTrackerFactory()).isInstanceOf(DatabaseWaitTracker.Factory.class);
 	}
 }

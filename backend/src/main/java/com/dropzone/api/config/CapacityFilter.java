@@ -1,18 +1,14 @@
 package com.dropzone.api.config;
 
 import com.dropzone.api.common.RecentEvents;
-import com.zaxxer.hikari.HikariDataSource;
-import com.zaxxer.hikari.HikariPoolMXBean;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.IntSupplier;
-import javax.sql.DataSource;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -20,21 +16,15 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class CapacityFilter extends OncePerRequestFilter {
 
 	public static final int BUSY_REQUESTS = 32;
+	public static final Duration SLOW_DATABASE_WAIT = Duration.ofSeconds(1);
 
 	private final AtomicInteger inFlight = new AtomicInteger();
 	private final RecentEvents busy;
 	private final RecentEvents databaseWaits;
-	private final IntSupplier waitingForDatabase;
 
-	@Autowired
-	public CapacityFilter(Clock clock, DataSource dataSource) {
-		this(clock, waiting(dataSource));
-	}
-
-	CapacityFilter(Clock clock, IntSupplier waitingForDatabase) {
+	public CapacityFilter(Clock clock) {
 		this.busy = new RecentEvents(clock);
 		this.databaseWaits = new RecentEvents(clock);
-		this.waitingForDatabase = waitingForDatabase;
 	}
 
 	@Override
@@ -44,13 +34,16 @@ public class CapacityFilter extends OncePerRequestFilter {
 			if (inFlight.incrementAndGet() >= BUSY_REQUESTS) {
 				busy.record();
 			}
-			if (waitingForDatabase.getAsInt() > 0) {
-				databaseWaits.record();
-			}
 			chain.doFilter(request, response);
 		}
 		finally {
 			inFlight.decrementAndGet();
+		}
+	}
+
+	public void databaseWait(Duration waited) {
+		if (waited.compareTo(SLOW_DATABASE_WAIT) >= 0) {
+			databaseWaits.record();
 		}
 	}
 
@@ -64,15 +57,5 @@ public class CapacityFilter extends OncePerRequestFilter {
 
 	public int inFlight() {
 		return inFlight.get();
-	}
-
-	private static IntSupplier waiting(DataSource dataSource) {
-		if (!(dataSource instanceof HikariDataSource hikari)) {
-			return () -> 0;
-		}
-		return () -> {
-			HikariPoolMXBean pool = hikari.getHikariPoolMXBean();
-			return pool == null ? 0 : pool.getThreadsAwaitingConnection();
-		};
 	}
 }

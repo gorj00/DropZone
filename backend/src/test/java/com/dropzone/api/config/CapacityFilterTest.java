@@ -7,7 +7,6 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import java.io.IOException;
 import java.time.Duration;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -17,7 +16,7 @@ class CapacityFilterTest {
 	@Test
 	void countsRequestsThatArriveWhileTheServerIsNearlyFull() throws Exception {
 		MovingClock clock = new MovingClock();
-		CapacityFilter filter = new CapacityFilter(clock, () -> 0);
+		CapacityFilter filter = new CapacityFilter(clock);
 		nested(filter, CapacityFilter.BUSY_REQUESTS + 2);
 		assertThat(filter.busyLastWindow()).isEqualTo(3);
 
@@ -29,14 +28,20 @@ class CapacityFilterTest {
 	}
 
 	@Test
-	void countsRequestsThatFindOthersWaitingForADatabaseConnection() throws Exception {
-		AtomicInteger waiting = new AtomicInteger();
-		CapacityFilter filter = new CapacityFilter(new MovingClock(), waiting::get);
-		nested(filter, 1);
-		waiting.set(2);
-		nested(filter, 2);
+	void countsOnlyDatabaseWaitsOfASecondOrMore() throws Exception {
+		MovingClock clock = new MovingClock();
+		CapacityFilter filter = new CapacityFilter(clock);
+		filter.databaseWait(Duration.ofMillis(999));
+		nested(filter, 3);
+		assertThat(filter.databaseWaitsLastWindow()).isZero();
+
+		filter.databaseWait(Duration.ofSeconds(1));
+		filter.databaseWait(Duration.ofSeconds(10));
 		assertThat(filter.databaseWaitsLastWindow()).isEqualTo(2);
 		assertThat(filter.busyLastWindow()).isZero();
+
+		clock.now = clock.now.plus(Duration.ofMinutes(6));
+		assertThat(filter.databaseWaitsLastWindow()).isZero();
 	}
 
 	private static void nested(CapacityFilter filter, int depth) throws ServletException, IOException {
