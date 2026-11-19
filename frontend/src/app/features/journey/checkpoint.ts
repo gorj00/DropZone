@@ -28,9 +28,6 @@ import { visibilityIcon, visibilityOf } from './visibility';
         <div class="absolute inset-x-0 top-0" [style.height.px]="neon() ? 340 : 390">
           @if (d.cp.rewardImageUrl) {
             <img class="ph" [src]="d.cp.rewardImageUrl" alt="">
-            @if (d.cp.rewardImageCredit) {
-              <p class="absolute right-3 top-[64px] z-[2] glass rounded-[8px] px-2 py-1 text-[10.5px] text-ink/80"><app-unsplash-credit [credit]="d.cp.rewardImageCredit" /></p>
-            }
           } @else {
             <div class="w-full h-full flex flex-col items-center justify-center gap-3 pb-10" style="background: radial-gradient(circle at 50% 38%, rgba(var(--accent-rgb), .45), transparent 62%), linear-gradient(160deg, var(--s3), var(--bg))">
               <span class="text-ink/40"><app-icon name="gift" [size]="56" /></span>
@@ -72,6 +69,9 @@ import { visibilityIcon, visibilityOf } from './visibility';
               <div class="h mt-1 break-words" [class]="neon() ? 'text-[32px]' : 'text-[42px]'">{{ r }}</div>
             } @else {
               <a class="h mt-2 block break-words" style="color: var(--accent-light)" [class]="neon() ? 'text-[30px]' : 'text-[38px]'" [routerLink]="['/journey', d.cp.id, 'edit']">+ Add a reward</a>
+            }
+            @if (d.cp.rewardImageUrl && d.cp.rewardImageCredit) {
+              <p class="mt-2 w-fit glass rounded-[8px] px-2 py-1 text-[10.5px] text-ink/80 opacity-60"><app-unsplash-credit [credit]="d.cp.rewardImageCredit" /></p>
             }
           </div>
         </div>
