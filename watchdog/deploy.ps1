@@ -17,7 +17,16 @@ if ($config -match 'REPLACE_WITH_KV_ID') {
 npx wrangler deploy
 if ($LASTEXITCODE -ne 0) { throw 'wrangler deploy failed' }
 
-gcloud secrets versions access latest --secret prod-dropzone-status-token --project $Project | npx wrangler secret put STATUS_TOKEN
-if ($LASTEXITCODE -ne 0) { throw 'setting STATUS_TOKEN failed' }
+$secrets = Join-Path $env:TEMP ("watchdog-" + [guid]::NewGuid().ToString('N') + '.json')
+try {
+    $token = ((gcloud secrets versions access latest --secret prod-dropzone-status-token --project $Project) -join '').Trim()
+    if (-not $token) { throw 'reading prod-dropzone-status-token failed' }
+    [IO.File]::WriteAllText($secrets, (@{ STATUS_TOKEN = $token } | ConvertTo-Json -Compress))
+    npx wrangler secret bulk $secrets
+    if ($LASTEXITCODE -ne 0) { throw 'setting STATUS_TOKEN failed' }
+}
+finally {
+    Remove-Item $secrets -Force -ErrorAction SilentlyContinue
+}
 
 Write-Host 'Watchdog deployed: checks https://api.dropzone.mobi every 5 minutes and emails os.jangorol@gmail.com.'
