@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Analytics, failureDetail } from '../../core/analytics';
 import { AuthService, isSignInCancelled } from '../../core/auth';
 import { ToastService } from '../../core/toast.service';
 import { Icon } from '../../ui/icon';
@@ -63,6 +64,7 @@ export class WelcomePage {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly toast = inject(ToastService);
+  private readonly analytics = inject(Analytics);
 
   protected readonly features = FEATURES;
   protected readonly busy = signal(false);
@@ -72,13 +74,20 @@ export class WelcomePage {
   protected async start(provider: 'google' | 'apple' = 'google'): Promise<void> {
     if (this.busy()) return;
     this.busy.set(true);
+    this.analytics.track('SIGN_IN_TAP', provider);
     try {
       const user = provider === 'apple' ? await this.auth.signInWithApple() : await this.auth.signInWithGoogle();
+      this.analytics.track('SIGN_IN_OK', provider);
       const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
       const next = returnUrl?.startsWith('/') && !returnUrl.startsWith('//') ? returnUrl : user.onboarded ? '/today' : '/onboarding/profile';
       await this.router.navigateByUrl(next, { replaceUrl: true });
     } catch (e) {
-      if (!isSignInCancelled(e)) this.toast.error(e);
+      if (isSignInCancelled(e)) {
+        this.analytics.track('SIGN_IN_CANCEL', provider);
+      } else {
+        this.analytics.track('SIGN_IN_FAIL', failureDetail(provider, e));
+        this.toast.error(e);
+      }
     } finally {
       this.busy.set(false);
     }

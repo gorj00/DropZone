@@ -3,6 +3,7 @@ package com.dropzone.api.config;
 import com.dropzone.api.auth.JwtService;
 import com.dropzone.api.auth.TokenVersionValidator;
 import com.dropzone.api.common.Cursor;
+import com.dropzone.api.events.AppEventController;
 import com.dropzone.api.jobs.JobController;
 import com.dropzone.api.jobs.StatusController;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
@@ -60,13 +61,14 @@ public class SecurityConfig {
 		BearerTokenResolver tokenResolver = request -> {
 			String path = request.getRequestURI().substring(request.getContextPath().length());
 			return path.startsWith("/api/v1/webhooks/") || path.startsWith("/api/v1/auth/") || path.equals("/api/v1/config")
-					|| path.startsWith(JobController.PATH + "/") || path.equals(StatusController.PATH) ? null : defaultResolver.resolve(request);
+					|| path.equals(AppEventController.PATH) || path.startsWith(JobController.PATH + "/") || path.equals(StatusController.PATH)
+							? null : defaultResolver.resolve(request);
 		};
 		http.csrf(c -> c.disable())
 				.cors(Customizer.withDefaults())
 				.sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authorizeHttpRequests(a -> a
-						.requestMatchers("/api/v1/auth/**", "/api/v1/webhooks/**", "/api/v1/config", JobController.PATH + "/**", StatusController.PATH,
+						.requestMatchers("/api/v1/auth/**", "/api/v1/webhooks/**", "/api/v1/config", AppEventController.PATH, JobController.PATH + "/**", StatusController.PATH,
 								"/actuator/health", "/actuator/health/**", "/error").permitAll()
 						.anyRequest().authenticated())
 				.oauth2ResourceServer(o -> o.bearerTokenResolver(tokenResolver).jwt(Customizer.withDefaults()).authenticationEntryPoint(entryPoint))

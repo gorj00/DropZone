@@ -2,6 +2,7 @@ import { ApplicationConfig, inject, provideAppInitializer, provideBrowserGlobalE
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
 import { routes } from './app.routes';
+import { Analytics } from './core/analytics';
 import { authInterceptor } from './core/auth';
 import { ConfigService } from './core/config.service';
 import { provideCrashReporting } from './core/native/crashlytics';
@@ -14,6 +15,7 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptors([authInterceptor])),
     provideRouter(routes, withComponentInputBinding(), withInMemoryScrolling({ scrollPositionRestoration: 'top' })),
     provideAppInitializer(() => {
+      inject(Analytics).start();
       void inject(ConfigService).load();
       return inject(SessionStore).init();
     })

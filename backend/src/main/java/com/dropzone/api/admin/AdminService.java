@@ -1,6 +1,9 @@
 package com.dropzone.api.admin;
 
 import com.dropzone.api.admin.AdminDtos.Account;
+import com.dropzone.api.admin.AdminDtos.AppEventView;
+import com.dropzone.api.admin.AdminDtos.EventCount;
+import com.dropzone.api.admin.AdminDtos.Funnel;
 import com.dropzone.api.admin.AdminDtos.Billing;
 import com.dropzone.api.admin.AdminDtos.BillingEventView;
 import com.dropzone.api.admin.AdminDtos.CheckpointView;
@@ -22,6 +25,9 @@ import com.dropzone.api.admin.AdminDtos.UserRow;
 import com.dropzone.api.common.ApiException;
 import com.dropzone.api.common.ServerErrors;
 import com.dropzone.api.config.CapacityFilter;
+import com.dropzone.api.domain.AppEvent;
+import com.dropzone.api.domain.AppEventName;
+import com.dropzone.api.domain.AppEventRepository;
 import com.dropzone.api.domain.BillingEvent;
 import com.dropzone.api.domain.BillingEventRepository;
 import com.dropzone.api.domain.Checkpoint;
@@ -95,6 +101,7 @@ public class AdminService {
 	public static final int MAX_LOG_DAYS = 366;
 	public static final int MAX_PAGE = 200;
 	public static final int MAX_LIST = 500;
+	public static final int MAX_FUNNEL_DAYS = 90;
 	static final Duration WEEK = Duration.ofDays(7);
 	static final Duration DAY = Duration.ofHours(24);
 	private static final long MB = 1024 * 1024;
@@ -107,6 +114,7 @@ public class AdminService {
 	private final ServerErrors serverErrors;
 	private final ServerErrorRepository errorRepository;
 	private final BillingEventRepository billingEvents;
+	private final AppEventRepository appEvents;
 	private final GoalRepository goals;
 	private final CheckpointRepository checkpoints;
 	private final UserQuestRepository quests;
@@ -125,7 +133,8 @@ public class AdminService {
 	private final Clock clock;
 
 	public AdminService(UserService users, UserRepository userRepository, ModerationService moderation, Jobs jobs, JobRunRepository jobRuns,
-			ServerErrors serverErrors, ServerErrorRepository errorRepository, BillingEventRepository billingEvents, GoalRepository goals,
+			ServerErrors serverErrors, ServerErrorRepository errorRepository, BillingEventRepository billingEvents, AppEventRepository appEvents,
+			GoalRepository goals,
 			CheckpointRepository checkpoints, UserQuestRepository quests, QuestCompletionRepository completions,
 			DailyResultRepository dailyResults, MeasurementRepository measurements, WeighInRepository weighIns, SlipUpRepository slipUps,
 			ProofRepository proofs, PushTokenRepository pushTokens, CapacityFilter capacity, DataSource dataSource,
@@ -138,6 +147,7 @@ public class AdminService {
 		this.serverErrors = serverErrors;
 		this.errorRepository = errorRepository;
 		this.billingEvents = billingEvents;
+		this.appEvents = appEvents;
 		this.goals = goals;
 		this.checkpoints = checkpoints;
 		this.quests = quests;
@@ -273,6 +283,27 @@ public class AdminService {
 		Map<UUID, String> emails = emails(list.stream().map(e -> e.userId).filter(Objects::nonNull).toList());
 		return list.stream().map(e -> new ErrorView(e.id, e.at, e.method, e.path, e.exception, e.message, e.userId, emails.get(e.userId),
 				e.revision)).toList();
+	}
+
+	@Transactional(readOnly = true)
+	public Funnel funnel(UUID adminId, int days) {
+		requireAdmin(adminId);
+		int span = Math.clamp(days, 1, MAX_FUNNEL_DAYS);
+		OffsetDateTime since = clock.instant().minus(Duration.ofDays(span)).atOffset(ZoneOffset.UTC);
+		List<EventCount> counts = jdbc.query("""
+				select name, case when name = 'ONBOARDING_STEP' then detail end as step, count(distinct device_id) as devices, count(*) as events
+				from app_events where at >= ? group by 1, 2 order by 1, 2""",
+				(rs, i) -> new EventCount(AppEventName.valueOf(rs.getString("name")), rs.getString("step"), rs.getLong("devices"),
+						rs.getLong("events")), since);
+		return new Funnel(span, counts);
+	}
+
+	@Transactional(readOnly = true)
+	public List<AppEventView> events(UUID adminId, int limit, AppEventName name) {
+		requireAdmin(adminId);
+		PageRequest page = PageRequest.of(0, Math.clamp(limit, 1, MAX_LIST));
+		List<AppEvent> list = name == null ? appEvents.findAllByOrderByAtDesc(page) : appEvents.findByNameOrderByAtDesc(name, page);
+		return list.stream().map(e -> new AppEventView(e.id, e.at, e.deviceId, e.name, e.detail, e.platform, e.appVersion)).toList();
 	}
 
 	@Transactional(readOnly = true)

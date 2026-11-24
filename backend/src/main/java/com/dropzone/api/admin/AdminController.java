@@ -1,6 +1,9 @@
 package com.dropzone.api.admin;
 
 import com.dropzone.api.admin.AdminDtos.Account;
+import com.dropzone.api.admin.AdminDtos.AppEventView;
+import com.dropzone.api.admin.AdminDtos.Funnel;
+import com.dropzone.api.domain.AppEventName;
 import com.dropzone.api.admin.AdminDtos.BillingEventView;
 import com.dropzone.api.admin.AdminDtos.DayView;
 import com.dropzone.api.admin.AdminDtos.ErrorView;
@@ -59,6 +62,17 @@ public class AdminController {
 	@GetMapping("/errors")
 	List<ErrorView> errors(@CurrentUser UUID userId, @RequestParam(defaultValue = "100") int limit) {
 		return admin.errors(userId, limit);
+	}
+
+	@GetMapping("/funnel")
+	Funnel funnel(@CurrentUser UUID userId, @RequestParam(defaultValue = "7") int days) {
+		return admin.funnel(userId, days);
+	}
+
+	@GetMapping("/events")
+	List<AppEventView> events(@CurrentUser UUID userId, @RequestParam(defaultValue = "100") int limit,
+			@RequestParam(required = false) AppEventName name) {
+		return admin.events(userId, limit, name);
 	}
 
 	@GetMapping("/billing-events")

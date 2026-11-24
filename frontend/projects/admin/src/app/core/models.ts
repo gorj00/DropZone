@@ -229,3 +229,35 @@ export interface ErrorView {
 }
 
 export type Summary = UserSummary;
+
+export type AppEventName =
+  | 'APP_OPEN'
+  | 'WELCOME_VIEW'
+  | 'SIGN_IN_TAP'
+  | 'SIGN_IN_CANCEL'
+  | 'SIGN_IN_FAIL'
+  | 'SIGN_IN_OK'
+  | 'ONBOARDING_STEP'
+  | 'ONBOARDING_DONE';
+
+export interface EventCount {
+  name: AppEventName;
+  step: string | null;
+  devices: number;
+  events: number;
+}
+
+export interface Funnel {
+  days: number;
+  counts: EventCount[];
+}
+
+export interface AppEventView {
+  id: string;
+  at: string;
+  deviceId: string;
+  name: AppEventName;
+  detail: string | null;
+  platform: 'ANDROID' | 'IOS' | 'WEB';
+  appVersion: string | null;
+}

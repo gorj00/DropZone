@@ -14,9 +14,9 @@ class RateLimitIntegrationTest extends IntegrationTest {
 
 	@Test
 	void everyBudgetIsListedInOnePlace() {
-		assertThat(RateLimitFilter.BUDGETS).extracting(RateLimitFilter.Budget::name).containsExactly("sign-in", "uploads", "comments",
+		assertThat(RateLimitFilter.BUDGETS).extracting(RateLimitFilter.Budget::name).containsExactly("sign-in", "app-events", "uploads", "comments",
 				"friend-requests", "friend-requests", "user-search", "user-search", "photo-search", "photo-search", "reports", "hypes");
-		assertThat(RateLimitFilter.BUDGETS).extracting(RateLimitFilter.Budget::capacity).containsExactly(10, 30, 30, 20, 20, 60, 60, 20, 20, 20, 120);
+		assertThat(RateLimitFilter.BUDGETS).extracting(RateLimitFilter.Budget::capacity).containsExactly(10, 120, 30, 30, 20, 20, 60, 60, 20, 20, 20, 120);
 	}
 
 	@Test

@@ -3,7 +3,8 @@ import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import type {
-  Account, AdminReport, AdminUser, BillingEventView, DayView, ErrorView, JobView, Overview, ReportTarget, ReportedItem, User, UserPage
+  Account, AdminReport, AdminUser, AppEventName, AppEventView, BillingEventView, DayView, ErrorView, Funnel, JobView, Overview, ReportTarget,
+  ReportedItem, User, UserPage
 } from './models';
 
 export const API_URL = environment.apiUrl;
@@ -41,6 +42,8 @@ export class ApiService {
   account(id: string) { return this.get<Account>(`/admin/users/${id}/account`); }
   days(id: string, from?: string, to?: string) { return this.get<DayView[]>(`/admin/users/${id}/days`, { from, to }); }
   errors(limit = 100) { return this.get<ErrorView[]>('/admin/errors', { limit }); }
+  funnel(days = 7) { return this.get<Funnel>('/admin/funnel', { days }); }
+  appEvents(limit = 100, name: AppEventName | null = null) { return this.get<AppEventView[]>('/admin/events', { limit, name }); }
   billingEvents(limit = 100, sandbox = SHOW_SANDBOX) { return this.get<BillingEventView[]>('/admin/billing-events', { limit, sandbox: String(sandbox) }); }
 
   reportedItems() { return this.get<ReportedItem[]>('/admin/reports'); }

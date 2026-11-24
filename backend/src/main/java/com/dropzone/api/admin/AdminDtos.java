@@ -1,6 +1,8 @@
 package com.dropzone.api.admin;
 
 import com.dropzone.api.common.Dtos.ReportEntryDto;
+import com.dropzone.api.domain.AppEventName;
+import com.dropzone.api.domain.Platform;
 import com.dropzone.api.domain.CheckpointStatus;
 import com.dropzone.api.domain.LengthUnit;
 import com.dropzone.api.domain.Metric;
@@ -96,5 +98,14 @@ public final class AdminDtos {
 	}
 
 	public record BillingEventView(String id, String type, String appUserId, String email, String environment, Instant receivedAt) {
+	}
+
+	public record EventCount(AppEventName name, String step, long devices, long events) {
+	}
+
+	public record Funnel(int days, List<EventCount> counts) {
+	}
+
+	public record AppEventView(UUID id, Instant at, UUID deviceId, AppEventName name, String detail, Platform platform, String appVersion) {
 	}
 }

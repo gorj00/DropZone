@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { App as CapApp } from '@capacitor/app';
+import { Analytics } from '../../core/analytics';
 import { ApiService } from '../../core/api/api.service';
 import { isProRequired } from '../../core/api/errors';
 import { UnlockMode } from '../../core/api/models';
@@ -108,6 +109,7 @@ export class LockPage implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly invite = inject(PendingInvite);
+  private readonly analytics = inject(Analytics);
 
   protected readonly apps = LOCKABLE_APPS;
   protected readonly pro = this.session.onboardingPro;
@@ -176,6 +178,7 @@ export class LockPage implements OnInit {
     this.busy.set(true);
     try {
       const { user, goal } = await this.api.onboard(this.state.request());
+      this.analytics.track('ONBOARDING_DONE');
       this.session.setUser(user);
       this.goals.goal.set(goal);
       this.state.reset();

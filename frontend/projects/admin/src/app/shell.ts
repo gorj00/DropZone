@@ -16,6 +16,7 @@ import { Session } from './core/session';
         <div class="lbl px-2 mt-1">Backoffice</div>
         <nav class="mt-6 space-y-1">
           <a class="navlink" routerLink="/" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }">Dashboard</a>
+          <a class="navlink" routerLink="/funnel" routerLinkActive="on">Funnel</a>
           <a class="navlink" routerLink="/users" routerLinkActive="on">Users</a>
           <a class="navlink" routerLink="/reports" routerLinkActive="on">Reports</a>
           <a class="navlink" routerLink="/jobs" routerLinkActive="on">Jobs</a>

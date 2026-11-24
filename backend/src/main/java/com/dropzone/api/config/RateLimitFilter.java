@@ -34,6 +34,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
 	public static final List<Budget> BUDGETS = List.of(
 			new Budget("sign-in", "POST", "/api/v1/auth/**", 10, Duration.ofMinutes(1), Key.IP),
+			new Budget("app-events", "POST", "/api/v1/events", 120, Duration.ofMinutes(10), Key.IP),
 			new Budget("uploads", "POST", "/api/v1/uploads", 30, Duration.ofHours(1), Key.USER),
 			new Budget("comments", "POST", "/api/v1/feed/*/comments", 30, Duration.ofMinutes(10), Key.USER),
 			new Budget("friend-requests", "POST", "/api/v1/social/requests", 20, Duration.ofDays(1), Key.USER),

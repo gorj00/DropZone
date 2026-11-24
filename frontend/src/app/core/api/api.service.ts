@@ -54,6 +54,8 @@ export class ApiService {
     return this.post<{ token: string; user: User }>(path, { email, displayName });
   }
 
+  trackEvent(event: { deviceId: string; name: string; detail: string | null; appVersion: string | null }) { return this.post<void>('/events', event); }
+
   async me(): Promise<{ user: User; token: string | null }> {
     const res = await firstValueFrom(this.http.get<User>(this.base + '/me', { observe: 'response' }));
     return { user: res.body as User, token: res.headers.get('X-Auth-Token') };

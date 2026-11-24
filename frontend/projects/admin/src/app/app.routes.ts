@@ -10,6 +10,7 @@ export const routes: Routes = [
     canActivate: [adminGuard],
     children: [
       { path: '', pathMatch: 'full', loadComponent: () => import('./pages/dashboard').then(m => m.DashboardPage) },
+      { path: 'funnel', loadComponent: () => import('./pages/funnel').then(m => m.FunnelPage) },
       { path: 'users', loadComponent: () => import('./pages/users').then(m => m.UsersPage) },
       { path: 'users/:id', loadComponent: () => import('./pages/user').then(m => m.UserPage) },
       { path: 'reports', loadComponent: () => import('./pages/reports').then(m => m.ReportsPage) },
